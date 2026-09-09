@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#eef9ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ラブカレ" />
+  <title>ラブカレ MVP</title>
+  <style>
+    :root{
+      --bg:#f7fbff;
+      --panel:#ffffff;
+      --text:#17324d;
+      --muted:#6d8295;
+      --line:#d9e7f2;
+      --accent:#6bb7d9;
+      --accent-soft:#e9f7fd;
+      --official:#ff6f91;
+      --cast:#6c9cf4;
+      --unit:#9b7de2;
+      --stage:#5fbd8a;
+      --guest:#e8b14f;
+      --going:#38a169;
+      --maybe:#d69e2e;
+      --no:#e05a5a;
+      --unset:#a0aec0;
+      --shadow:0 10px 30px rgba(45,86,120,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+      background:linear-gradient(180deg,#eef9ff 0,#f8fbfd 260px);
+      color:var(--text);
+    }
+    button,input{font:inherit}
+    .app{max-width:1320px;margin:0 auto;padding:24px;padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+    header{
+      display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+      margin-bottom:18px;
+    }
+    .brand h1{margin:0;font-size:28px;letter-spacing:.02em}
+    .brand p{margin:6px 0 0;color:var(--muted);font-size:14px}
+    .pill{
+      background:var(--accent-soft);color:#35789a;border:1px solid #cdeaf7;
+      padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;
+    }
+    .toolbar{
+      display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;
+      background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:14px 16px;box-shadow:var(--shadow);margin-bottom:18px;
+    }
+    .month-nav{display:flex;align-items:center;gap:8px}
+    .month-nav button,.ghost-btn{
+      border:1px solid var(--line);background:#fff;color:var(--text);
+      border-radius:10px;padding:8px 10px;cursor:pointer;
+    }
+    .month-nav button:hover,.ghost-btn:hover{background:#f4f9fc}
+    #monthLabel{font-weight:800;min-width:120px;text-align:center}
+    .filters{display:flex;flex-wrap:wrap;gap:8px}
+    .filter{
+      display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);
+      padding:7px 10px;border-radius:999px;background:#fff;cursor:pointer;font-size:13px;
+      user-select:none;
+    }
+    .filter input{accent-color:var(--accent)}
+    .legend-dot{width:9px;height:9px;border-radius:50%}
+    .summary{color:var(--muted);font-size:13px;text-align:right}
+    .layout{
+      display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start;
+    }
+    .calendar{
+      background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      overflow:hidden;box-shadow:var(--shadow);
+    }
+    .weekdays,.grid{
+      display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+    }
+    .weekday{
+      padding:10px;text-align:center;font-size:12px;font-weight:800;color:var(--muted);
+      border-bottom:1px solid var(--line);background:#fbfdff;
+    }
+    .day{
+      min-height:150px;padding:8px;border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);background:#fff;position:relative;
+    }
+    .day:nth-child(7n){border-right:none}
+    .day.outside{background:#fafcfd;color:#a8b7c2}
+    .date{
+      width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+      font-size:13px;font-weight:800;margin-bottom:5px;
+    }
+    .day.today .date{background:var(--accent);color:white}
+    .events{display:flex;flex-direction:column;gap:5px}
+    .event{
+      border:0;border-left:4px solid var(--accent);background:#f8fbfd;
+      border-radius:8px;padding:7px 8px;text-align:left;cursor:pointer;width:100%;
+      color:var(--text);
+    }
+    .event:hover{filter:brightness(.98)}
+    .event-title{
+      font-size:12px;font-weight:800;line-height:1.35;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    }
+    .event-meta{font-size:10px;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;gap:5px}
+    .status-badge{
+      font-size:10px;font-weight:800;border-radius:999px;padding:2px 6px;background:#edf2f7;
+    }
+    .sidebar{
+      background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);position:sticky;top:16px;
+    }
+    .sidebar h2{font-size:17px;margin:0 0 4px}
+    .sidebar .hint{font-size:12px;color:var(--muted);margin-bottom:14px}
+    .event-list{display:flex;flex-direction:column;gap:10px;max-height:72vh;overflow:auto;padding-right:4px}
+    .list-card{
+      border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff;
+    }
+    .list-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .date-chip{font-size:12px;font-weight:800;color:#3d708d;background:var(--accent-soft);padding:4px 7px;border-radius:8px;white-space:nowrap}
+    .category-chip{font-size:10px;font-weight:800;padding:3px 6px;border-radius:999px;background:#f0f4f7}
+    .list-card h3{font-size:14px;line-height:1.45;margin:8px 0 5px}
+    .small{font-size:11px;color:var(--muted);line-height:1.5}
+    .status-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px}
+    .status-btn{
+      border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 3px;
+      font-size:10px;font-weight:800;cursor:pointer;
+    }
+    .status-btn.active.going{background:#eaf8ef;border-color:#9ed8b4;color:#24784a}
+    .status-btn.active.maybe{background:#fff7df;border-color:#ead28c;color:#9a6a00}
+    .status-btn.active.no{background:#fff0f0;border-color:#edb2b2;color:#a23f3f}
+    .status-btn.active.unset{background:#f1f5f8;border-color:#cbd5df;color:#667788}
+    .empty{padding:30px 10px;text-align:center;color:var(--muted);font-size:13px}
+    .footer-note{
+      margin-top:14px;color:var(--muted);font-size:11px;line-height:1.6
+    }
+    .modal-backdrop{
+      display:none;position:fixed;inset:0;background:rgba(16,40,60,.35);
+      padding:20px;align-items:center;justify-content:center;z-index:20;
+    }
+    .modal-backdrop.open{display:flex}
+    .modal{
+      width:min(560px,100%);background:#fff;border-radius:20px;padding:20px;
+      box-shadow:0 24px 70px rgba(13,48,74,.25);
+    }
+    .modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .modal h2{margin:8px 0;font-size:21px}
+    .modal .close{border:0;background:#eef4f7;width:32px;height:32px;border-radius:50%;cursor:pointer}
+    .modal dl{display:grid;grid-template-columns:90px 1fr;gap:8px 12px;font-size:13px}
+    .modal dt{color:var(--muted);font-weight:700}
+    .modal dd{margin:0}
+    .modal .status-row{margin-top:18px}
+    @media (max-width:980px){
+      .layout{grid-template-columns:1fr}
+      .sidebar{position:static}
+      .toolbar{grid-template-columns:1fr}
+      .summary{text-align:left}
+      .day{min-height:120px}
+    }
+    @media (max-width:700px){
+      .app{padding-top:max(12px,env(safe-area-inset-top));padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+      header{align-items:flex-start;flex-direction:column}
+      .calendar{display:none}
+      .sidebar{padding:14px;position:static}
+      .event-list{max-height:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <h1>ラブカレ <span style="font-size:.62em;color:#6f91a6">MVP</span></h1>
+        <p>ラブライブ！関連イベントを、行く・迷う・行かないでサクッと管理。</p>
+      </div>
+      <div class="pill">🧪 試作データ / 2026年10月</div>
+    </header>
+
+    <section class="toolbar">
+      <div class="month-nav">
+        <button id="prevMonth" aria-label="前月">←</button>
+        <div id="monthLabel"></div>
+        <button id="nextMonth" aria-label="翌月">→</button>
+      </div>
+
+      <div class="filters" id="filters"></div>
+
+      <div class="summary" id="summary"></div>
+    </section>
+
+    <main class="layout">
+      <section class="calendar">
+        <div class="weekdays">
+          <div class="weekday">日</div>
+          <div class="weekday">月</div>
+          <div class="weekday">火</div>
+          <div class="weekday">水</div>
+          <div class="weekday">木</div>
+          <div class="weekday">金</div>
+          <div class="weekday">土</div>
+        </div>
+        <div class="grid" id="calendarGrid"></div>
+      </section>
+
+      <aside class="sidebar">
+        <h2>今月のイベント</h2>
+        <div class="hint">ステータスは自動でブラウザに保存されます。</div>
+        <div class="event-list" id="eventList"></div>
+        <div class="footer-note">
+          ※ イベント情報はUI確認用の試作データです。正式運用では公式ソース確認・更新日・出典URLの管理を追加する想定です。
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div id="modalCategory"></div>
+          <h2 id="modalTitle"></h2>
+        </div>
+        <button class="close" id="modalClose" aria-label="閉じる">×</button>
+      </div>
+      <dl>
+        <dt>日時</dt><dd id="modalDate"></dd>
+        <dt>出演</dt><dd id="modalCast"></dd>
+        <dt>会場</dt><dd id="modalVenue"></dd>
+        <dt>メモ</dt><dd id="modalNote"></dd>
+      </dl>
+      <div class="status-row" id="modalStatus"></div>
+    </div>
+  </div>
+
+  <script>
+    const categories = {
+      official: {label:"公式", color:"var(--official)"},
+      cast:     {label:"キャスト", color:"var(--cast)"},
+      unit:     {label:"別ユニット", color:"var(--unit)"},
+      stage:    {label:"舞台・朗読", color:"var(--stage)"},
+      guest:    {label:"ゲスト出演", color:"var(--guest)"}
+    };
+
+    const events = [
+      {id:"e1002", date:"2026-10-02", time:"18:00", category:"official", title:"『Liella!と結ぶプロジェクト』発売記念お渡し会", cast:"Liella! キャスト", venue:"東京都内", note:"MVP用サンプル"},
+      {id:"e1003a", date:"2026-10-03", time:"13:30", category:"cast", title:"岬なこのそんなこんなこラジオ！イベント 昼", cast:"岬なこ", venue:"科学技術館サイエンスホール", note:"2公演想定"},
+      {id:"e1003b", date:"2026-10-03", time:"17:00", category:"cast", title:"野中ここなのノナカの野望 1周年スペシャルイベント", cast:"野中ここな", venue:"出島メッセ長崎", note:"地方イベント表示テスト"},
+      {id:"e1004a", date:"2026-10-04", time:"14:00", category:"cast", title:"薮島朱音がYATTEKURU", cast:"薮島朱音", venue:"あるあるCity", note:""},
+      {id:"e1004b", date:"2026-10-04", time:"18:00", category:"guest", title:"もえ・つむぎ・きゅーとあぐれっしょんっ！", cast:"岬なこ（ゲスト）", venue:"科学技術館サイエンスホール", note:"ゲスト出演カテゴリのテスト"},
+      {id:"e1009", date:"2026-10-09", time:"18:30", category:"official", title:"『Liella!と結ぶプロジェクト』発売記念お渡し会", cast:"Liella! キャスト", venue:"東京都内", note:""},
+      {id:"e1010a", date:"2026-10-10", time:"14:00", category:"official", title:"ラブライブ！フェス 前夜祭 FILM LIVE Day.1 昼", cast:"シリーズ合同", venue:"Shibuya LOVEZ", note:""},
+      {id:"e1010b", date:"2026-10-10", time:"18:30", category:"cast", title:"坂倉 花がYATTEKURU", cast:"坂倉花", venue:"あるあるCity", note:""},
+      {id:"e1011", date:"2026-10-11", time:"17:00", category:"official", title:"ラブライブ！フェス 前夜祭 FILM LIVE Day.2", cast:"シリーズ合同", venue:"Shibuya LOVEZ", note:""},
+      {id:"e1012", date:"2026-10-12", time:"15:00", category:"cast", title:"相良茉優と鬼頭明里がYATTEKURU", cast:"相良茉優、鬼頭明里", venue:"あるあるCity", note:""},
+      {id:"e1014", date:"2026-10-14", time:"19:00", category:"cast", title:"伊波杏樹 LIVE TOUR 2026 東京", cast:"伊波杏樹", venue:"東京キネマ倶楽部", note:"ソロ音楽活動もキャストカテゴリに含める案"},
+      {id:"e1017a", date:"2026-10-17", time:"13:00", category:"guest", title:"キャラミクス トークイベント vol.2", cast:"月音こな、ペイトン尚未 ほか", venue:"高千穂大学", note:"同日複数イベントの確認用"},
+      {id:"e1017b", date:"2026-10-17", time:"18:00", category:"unit", title:"番組合同イベント", cast:"小林愛香、野中ここな", venue:"恵比寿", note:"別ユニット・合同企画の例"},
+      {id:"e1020", date:"2026-10-20", time:"18:30", category:"stage", title:"名作リーディングシアター『シャーロック・ホームズ』", cast:"月音こな ほか", venue:"博品館劇場", note:"朗読劇カテゴリ"},
+      {id:"e1024a", date:"2026-10-24", time:"14:00", category:"cast", title:"花宮初奈 誕生日イベント", cast:"花宮初奈", venue:"THEATER MILANO-Za", note:""},
+      {id:"e1024b", date:"2026-10-24", time:"18:00", category:"cast", title:"こにゃいと本気ミーティング2", cast:"月音こな、野中ここな", venue:"幕張", note:""},
+      {id:"e1025", date:"2026-10-25", time:"14:00", category:"stage", title:"リーディングシアター『シャーロック・ホームズ』", cast:"伊波杏樹、月音こな ほか", venue:"博品館劇場", note:""},
+      {id:"e1031", date:"2026-10-31", time:"17:00", category:"stage", title:"朗読と歌とおしゃべりをきみと", cast:"菅叶和", venue:"杉並区勤労福祉会館", note:""}
+    ];
+
+    const statusDef = {
+      going:{label:"○ 行く", short:"○", cls:"going"},
+      maybe:{label:"△ 迷い", short:"△", cls:"maybe"},
+      no:{label:"× 行かない", short:"×", cls:"no"},
+      unset:{label:"－ 未設定", short:"－", cls:"unset"}
+    };
+
+    let viewDate = new Date(2026, 9, 1);
+    let activeCategories = new Set(Object.keys(categories));
+    let selectedEventId = null;
+
+    function loadStatus(id){
+      return localStorage.getItem("lovecale:"+id) || "unset";
+    }
+    function saveStatus(id,status){
+      localStorage.setItem("lovecale:"+id,status);
+      render();
+      if(selectedEventId===id) openModal(id);
+    }
+
+    function ymd(d){
+      return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-");
+    }
+
+    function renderFilters(){
+      const el = document.getElementById("filters");
+      el.innerHTML = "";
+      Object.entries(categories).forEach(([key,c])=>{
+        const label = document.createElement("label");
+        label.className = "filter";
+        label.innerHTML = `<input type="checkbox" ${activeCategories.has(key)?"checked":""} data-cat="${key}">
+          <span class="legend-dot" style="background:${c.color}"></span>${c.label}`;
+        el.appendChild(label);
+      });
+      el.querySelectorAll("input").forEach(i=>i.addEventListener("change",e=>{
+        const key=e.target.dataset.cat;
+        e.target.checked ? activeCategories.add(key) : activeCategories.delete(key);
+        render();
+      }));
+    }
+
+    function currentMonthEvents(){
+      const y=viewDate.getFullYear(), m=viewDate.getMonth()+1;
+      return events.filter(e=>{
+        const [ey,em]=e.date.split("-").map(Number);
+        return ey===y && em===m && activeCategories.has(e.category);
+      }).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    }
+
+    function renderCalendar(){
+      const grid=document.getElementById("calendarGrid");
+      grid.innerHTML="";
+      const y=viewDate.getFullYear(), m=viewDate.getMonth();
+      document.getElementById("monthLabel").textContent=`${y}年 ${m+1}月`;
+
+      const first=new Date(y,m,1);
+      const start=new Date(y,m,1-first.getDay());
+      const today=new Date();
+      const byDate={};
+      currentMonthEvents().forEach(e=>(byDate[e.date] ||= []).push(e));
+
+      for(let i=0;i<42;i++){
+        const d=new Date(start);
+        d.setDate(start.getDate()+i);
+        const key=ymd(d);
+        const cell=document.createElement("div");
+        cell.className="day"+(d.getMonth()!==m?" outside":"");
+        if(key===ymd(today)) cell.classList.add("today");
+        cell.innerHTML=`<div class="date">${d.getDate()}</div><div class="events"></div>`;
+        const box=cell.querySelector(".events");
+
+        (byDate[key]||[]).forEach(e=>{
+          const st=loadStatus(e.id);
+          const btn=document.createElement("button");
+          btn.className="event";
+          btn.style.borderLeftColor=categories[e.category].color;
+          btn.innerHTML=`
+            <div class="event-title">${e.title}</div>
+            <div class="event-meta">
+              <span>${e.time}</span>
+              <span class="status-badge">${statusDef[st].short}</span>
+            </div>`;
+          btn.addEventListener("click",()=>openModal(e.id));
+          box.appendChild(btn);
+        });
+        grid.appendChild(cell);
+      }
+    }
+
+    function renderList(){
+      const list=document.getElementById("eventList");
+      const data=currentMonthEvents();
+      const counts={going:0,maybe:0,no:0,unset:0};
+      data.forEach(e=>counts[loadStatus(e.id)]++);
+      document.getElementById("summary").textContent=
+        `${data.length}件 / 行く ${counts.going}・迷い ${counts.maybe}`;
+
+      if(!data.length){
+        list.innerHTML='<div class="empty">表示するイベントがありません。</div>';
+        return;
+      }
+      list.innerHTML="";
+      data.forEach(e=>{
+        const st=loadStatus(e.id);
+        const [yy,mm,dd]=e.date.split("-");
+        const c=categories[e.category];
+        const card=document.createElement("div");
+        card.className="list-card";
+        card.innerHTML=`
+          <div class="list-top">
+            <div class="date-chip">${Number(mm)}/${Number(dd)} ${e.time}</div>
+            <div class="category-chip" style="border-left:4px solid ${c.color}">${c.label}</div>
+          </div>
+          <h3>${e.title}</h3>
+          <div class="small">${e.cast}<br>${e.venue}</div>
+          <div class="status-row">
+            ${Object.entries(statusDef).map(([key,s])=>
+              `<button class="status-btn ${s.cls} ${st===key?"active":""}" data-status="${key}">${s.label}</button>`
+            ).join("")}
+          </div>`;
+        card.querySelectorAll(".status-btn").forEach(b=>b.addEventListener("click",()=>saveStatus(e.id,b.dataset.status)));
+        card.querySelector("h3").style.cursor="pointer";
+        card.querySelector("h3").addEventListener("click",()=>openModal(e.id));
+        list.appendChild(card);
+      });
+    }
+
+    function render(){
+      renderFilters();
+      renderCalendar();
+      renderList();
+    }
+
+    function openModal(id){
+      const e=events.find(x=>x.id===id);
+      if(!e) return;
+      selectedEventId=id;
+      const c=categories[e.category];
+      document.getElementById("modalCategory").innerHTML=`<span class="category-chip" style="border-left:4px solid ${c.color}">${c.label}</span>`;
+      document.getElementById("modalTitle").textContent=e.title;
+      document.getElementById("modalDate").textContent=`${e.date} ${e.time}`;
+      document.getElementById("modalCast").textContent=e.cast;
+      document.getElementById("modalVenue").textContent=e.venue;
+      document.getElementById("modalNote").textContent=e.note || "－";
+      const st=loadStatus(id);
+      document.getElementById("modalStatus").innerHTML=Object.entries(statusDef).map(([key,s])=>
+        `<button class="status-btn ${s.cls} ${st===key?"active":""}" data-status="${key}">${s.label}</button>`
+      ).join("");
+      document.querySelectorAll("#modalStatus .status-btn").forEach(b=>b.addEventListener("click",()=>saveStatus(id,b.dataset.status)));
+      document.getElementById("modalBackdrop").classList.add("open");
+    }
+
+    function closeModal(){
+      document.getElementById("modalBackdrop").classList.remove("open");
+      selectedEventId=null;
+    }
+
+    document.getElementById("prevMonth").addEventListener("click",()=>{
+      viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);render();
+    });
+    document.getElementById("nextMonth").addEventListener("click",()=>{
+      viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);render();
+    });
+    document.getElementById("modalClose").addEventListener("click",closeModal);
+    document.getElementById("modalBackdrop").addEventListener("click",e=>{
+      if(e.target.id==="modalBackdrop") closeModal();
+    });
+    document.addEventListener("keydown",e=>{if(e.key==="Escape") closeModal();});
+
+    render();
+  </script>
+</body>
+</html>
