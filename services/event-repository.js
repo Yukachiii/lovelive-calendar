@@ -11,6 +11,10 @@ export class StaticEventRepository {
   }
 
   async listEvents() {
-    return this.events.map(event => ({ ...event }));
+    return this.events.map(event => ({
+      ...event,
+      cast: Array.isArray(event.cast) ? [...event.cast] : event.cast,
+      venue: event.venue ? { ...event.venue } : event.venue
+    }));
   }
 }

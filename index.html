@@ -17,7 +17,7 @@
         <h1>ラブカレ <span style="font-size:.62em;color:#6f91a6">MVP</span></h1>
         <p>ラブライブ！関連イベントを、行く・迷う・行かないでサクッと管理。</p>
       </div>
-      <div class="pill">🧪 試作データ / 2026年10月</div>
+      <div class="pill">公式情報確認済み / 2026年10月</div>
     </header>
 
     <section class="toolbar">
@@ -51,14 +51,14 @@
         <div class="hint">ステータスは自動でブラウザに保存されます。</div>
         <div class="event-list" id="eventList"></div>
         <div class="footer-note">
-          ※ イベント情報はUI確認用の試作データです。正式運用では公式ソース確認・更新日・出典URLの管理を追加する想定です。
+          ※ 2026年9月9日時点で、掲載対象のイベント情報を確認しています。月内の全イベントを網羅するものではありません。参加・応募前に各イベントの公式ページで最新情報を確認してください。
         </div>
       </aside>
     </main>
   </div>
 
   <div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-head">
         <div>
           <div id="modalCategory"></div>
@@ -70,6 +70,8 @@
         <dt>日時</dt><dd id="modalDate"></dd>
         <dt>出演</dt><dd id="modalCast"></dd>
         <dt>会場</dt><dd id="modalVenue"></dd>
+        <dt>情報源</dt><dd id="modalSources"></dd>
+        <dt>確認日</dt><dd id="modalVerifiedAt"></dd>
         <dt>メモ</dt><dd id="modalNote"></dd>
       </dl>
       <div class="status-row" id="modalStatus"></div>

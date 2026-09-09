@@ -111,6 +111,7 @@ header{
 .date-chip{font-size:12px;font-weight:800;color:#3d708d;background:var(--accent-soft);padding:4px 7px;border-radius:8px;white-space:nowrap}
 .category-chip{font-size:10px;font-weight:800;padding:3px 6px;border-radius:999px;background:#f0f4f7}
 .list-card h3{font-size:14px;line-height:1.45;margin:8px 0 5px}
+.performance-label{font-size:12px;font-weight:800;color:#476f87;margin:-1px 0 5px}
 .small{font-size:11px;color:var(--muted);line-height:1.5}
 .status-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px}
 .status-btn{
@@ -140,6 +141,8 @@ header{
 .modal dl{display:grid;grid-template-columns:90px 1fr;gap:8px 12px;font-size:13px}
 .modal dt{color:var(--muted);font-weight:700}
 .modal dd{margin:0}
+.official-link{color:#267ba4;font-weight:800;text-underline-offset:2px}
+.official-link:hover{color:#185b7a}
 .modal .status-row{margin-top:18px}
 @media (max-width:980px){
   .layout{grid-template-columns:1fr}
