@@ -14,6 +14,7 @@ export class StaticEventRepository {
     return this.events.map(event => ({
       ...event,
       cast: Array.isArray(event.cast) ? [...event.cast] : event.cast,
+      allCast: Array.isArray(event.allCast) ? [...event.allCast] : event.allCast,
       series: Array.isArray(event.series) ? [...event.series] : [],
       venue: event.venue ? { ...event.venue } : event.venue
     }));

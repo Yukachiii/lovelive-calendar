@@ -17,21 +17,34 @@ export const seriesDefinitions = {
   series: { label: "シリーズ合同" }
 };
 
-const castSeries = {
-  muse: ["内田彩", "久保ユリカ"],
-  aqours: ["伊波杏樹", "逢田梨香子", "斉藤朱夏", "小林愛香"],
-  nijigasaki: ["大西亜玖璃", "相良茉優", "田中ちえ美", "鬼頭明里", "内田秀", "前田佳織里", "村上奈津実", "小泉萌香"],
+// UIと将来のAPIで共通利用する、シリーズ別のラブライブ！キャスト名簿です。
+// イベントの全出演者はallCastに残し、画面にはこの名簿に一致するcastだけを渡します。
+// 参照: https://www.lovelive-anime.jp/special/members/ （2026-09-10確認）
+export const castBySeries = {
+  muse: ["新田恵海", "南條愛乃", "内田彩", "三森すずこ", "飯田里穂", "Pile", "楠田亜衣奈", "久保ユリカ", "徳井青空"],
+  aqours: ["伊波杏樹", "逢田梨香子", "諏訪ななか", "小宮有紗", "斉藤朱夏", "小林愛香", "高槻かなこ", "鈴木愛奈", "降幡愛"],
+  nijigasaki: ["矢野妃菜喜", "大西亜玖璃", "相良茉優", "前田佳織里", "久保田未夢", "村上奈津実", "鬼頭明里", "楠木ともり", "林鼓子", "指出毬亜", "田中ちえ美", "小泉萌香", "内田秀", "法元明菜"],
   liella: ["伊達さゆり", "Liyuu", "岬なこ", "ペイトン尚未", "青山なぎさ", "鈴原希実", "薮島朱音", "大熊和奏", "絵森彩", "結那", "坂倉花"],
   hasunosora: ["楡井希実", "野中ここな", "花宮初奈", "佐々木琴子", "菅叶和", "月音こな", "櫻井陽菜", "葉山風花", "来栖りん", "三宅美羽", "進藤あまね"],
   ikizurai: ["綾咲穂音", "遠藤璃菜", "宮野芹", "藤野こころ", "坂野愛羽", "瀬古梨愛", "奥村優季", "天沢朱音", "小戸森穂花", "涼ノ瀬葵音"]
 };
 
+const loveLiveCastNames = new Set(Object.values(castBySeries).flat());
+
+function normalizeCastName(name = "") {
+  return String(name).replace(/[（(].*$/, "").trim();
+}
+
+function isLoveLiveCast(name) {
+  return loveLiveCastNames.has(normalizeCastName(name));
+}
+
 function deriveSeries(event) {
   const related = new Set(Array.isArray(event.series) ? event.series : []);
   const cast = Array.isArray(event.cast) ? event.cast : [event.cast].filter(Boolean);
 
-  Object.entries(castSeries).forEach(([series, names]) => {
-    if (cast.some(name => names.includes(String(name).replace(/[（(].*$/, "").trim()))) {
+  Object.entries(castBySeries).forEach(([series, names]) => {
+    if (cast.some(name => names.includes(normalizeCastName(name)))) {
       related.add(series);
     }
   });
@@ -83,9 +96,14 @@ const venues = {
 };
 
 function verifiedEvent({ endsAt = null, performanceLabel = "", note = "", sourceUrl = null, verifiedAt = DEFAULT_VERIFIED_AT, ...event }) {
+  const allCast = (Array.isArray(event.cast) ? event.cast : [event.cast]).filter(Boolean);
+  const cast = allCast.filter(isLoveLiveCast);
+
   return {
     ...event,
-    series: deriveSeries(event),
+    allCast,
+    cast,
+    series: deriveSeries({ ...event, cast }),
     endsAt,
     performanceLabel,
     note,
@@ -150,7 +168,7 @@ const ikizuraiCast = [
 ];
 
 // 1レコードを1公演・1出演枠として扱います。
-export const events = [
+const candidateEvents = [
   ...[
     ["20260905-day", "2026-09-05", "昼の部", "13:00", "14:00", [...liellaCast, "相良茉優", "田中ちえ美"]],
     ["20260905-night", "2026-09-05", "夜の部", "17:30", "18:30", [...liellaCast, "相良茉優", "田中ちえ美"]],
@@ -516,3 +534,7 @@ export const events = [
     cast: ["紫月杏朱彩", "梅澤めぐ", "菅叶和", "湊みや"], venue: venues.suginamiHall, officialUrl: fioriUrl
   }))
 ];
+
+// 他作品の出演者だけの枠は掲載対象から外します。シリーズ公式イベントは、
+// 登壇キャストの記載がない場合もseries情報があれば残します。
+export const events = candidateEvents.filter(event => event.cast.length || event.series.length);

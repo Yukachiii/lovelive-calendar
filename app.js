@@ -1,4 +1,4 @@
-import { categories, events as verifiedEvents, seriesDefinitions } from "./data/events.js";
+import { castBySeries, categories, events as verifiedEvents, seriesDefinitions } from "./data/events.js";
 import { StaticEventRepository } from "./services/event-repository.js";
 
 let events = [];
@@ -57,7 +57,8 @@ function displayTitle(event) {
 }
 
 function castText(event) {
-  return Array.isArray(event.cast) ? event.cast.join("、") : event.cast;
+  const cast = Array.isArray(event.cast) ? event.cast : [event.cast].filter(Boolean);
+  return cast.length ? cast.join("、") : "記載なし";
 }
 
 function normalizeCastName(name = "") {
@@ -123,6 +124,48 @@ function populateSelect(selectId, options) {
   options.forEach(({ value, label }) => select.add(new Option(label, value)));
 }
 
+function availableCastNames(seriesKey = "all") {
+  const targetEvents = seriesKey === "all"
+    ? events
+    : events.filter(event => seriesKey === "other" ? !event.series?.length : event.series?.includes(seriesKey));
+  return new Set(targetEvents.flatMap(event =>
+    (Array.isArray(event.cast) ? event.cast : [event.cast]).filter(Boolean).map(normalizeCastName)
+  ));
+}
+
+function populateCastFilter() {
+  const select = document.getElementById("castFilter");
+  const allOption = new Option("すべて", "all");
+  select.replaceChildren(allOption);
+
+  const availableNames = availableCastNames(filterState.series);
+  const seriesKeys = castBySeries[filterState.series]
+    ? [filterState.series]
+    : Object.keys(castBySeries);
+  const addedNames = new Set();
+
+  seriesKeys.forEach(seriesKey => {
+    const names = castBySeries[seriesKey]
+      .filter(name => availableNames.has(name) && !addedNames.has(name));
+    if (!names.length) return;
+
+    const group = document.createElement("optgroup");
+    group.label = seriesDefinitions[seriesKey]?.label || seriesKey;
+    names.forEach(name => {
+      group.appendChild(new Option(name, name));
+      addedNames.add(name);
+    });
+    select.appendChild(group);
+  });
+
+  if (filterState.cast !== "all" && !addedNames.has(filterState.cast)) {
+    filterState.cast = "all";
+  }
+  select.disabled = addedNames.size === 0;
+  allOption.textContent = select.disabled ? "該当キャストなし" : "すべて";
+  select.value = filterState.cast;
+}
+
 function setupFilterControls() {
   const categoryContainer = document.getElementById("categoryFilters");
   Object.entries(categories).forEach(([key, category]) => {
@@ -141,10 +184,7 @@ function setupFilterControls() {
   if (hasOtherSeries) seriesOptions.push({ value: "other", label: "その他関連" });
   populateSelect("seriesFilter", seriesOptions);
 
-  const castOptions = [...new Set(events.flatMap(event =>
-    (Array.isArray(event.cast) ? event.cast : [event.cast]).filter(Boolean).map(normalizeCastName)
-  ))].sort((a, b) => a.localeCompare(b, "ja")).map(value => ({ value, label: value }));
-  populateSelect("castFilter", castOptions);
+  populateCastFilter();
 
   const regions = [...new Set(events.map(eventRegion))].sort((a, b) => {
     if (a === "online") return 1;
@@ -171,7 +211,12 @@ function setupFilterControls() {
     filterState.query = event.target.value.trim();
     render();
   });
-  ["series", "cast", "region", "status"].forEach(filter => {
+  document.getElementById("seriesFilter").addEventListener("change", event => {
+    filterState.series = event.target.value;
+    populateCastFilter();
+    render();
+  });
+  ["cast", "region", "status"].forEach(filter => {
     document.getElementById(`${filter}Filter`).addEventListener("change", event => {
       filterState[filter] = event.target.value;
       render();
@@ -209,6 +254,7 @@ function resetFilters() {
   filterState.region = "all";
   filterState.status = "all";
   activeCategories = new Set(Object.keys(categories));
+  populateCastFilter();
   render();
 }
 
@@ -300,7 +346,7 @@ function renderList() {
       </div>
       <h3>${escapeHtml(event.title)}</h3>
       ${event.performanceLabel ? `<div class="performance-label">${escapeHtml(event.performanceLabel)}</div>` : ""}
-      <div class="small">関連：${escapeHtml(seriesText(event))}<br>出演：${escapeHtml(castText(event))}<br>会場：${escapeHtml(venueText(event))}</div>
+      <div class="small">関連：${escapeHtml(seriesText(event))}<br>関連キャスト：${escapeHtml(castText(event))}<br>会場：${escapeHtml(venueText(event))}</div>
       <div class="status-row">
         ${Object.entries(statusDef).map(([key, definition]) =>
           `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
