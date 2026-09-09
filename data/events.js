@@ -6,6 +6,43 @@ export const categories = {
   guest: { label: "ゲスト出演", color: "var(--guest)" }
 };
 
+export const seriesDefinitions = {
+  muse: { label: "μ’s" },
+  aqours: { label: "Aqours" },
+  nijigasaki: { label: "虹ヶ咲" },
+  liella: { label: "Liella!" },
+  hasunosora: { label: "蓮ノ空" },
+  ikizurai: { label: "いきづらい部！" },
+  musical: { label: "スクールアイドルミュージカル" },
+  series: { label: "シリーズ合同" }
+};
+
+const castSeries = {
+  muse: ["内田彩", "久保ユリカ"],
+  aqours: ["伊波杏樹", "逢田梨香子", "斉藤朱夏", "小林愛香"],
+  nijigasaki: ["大西亜玖璃", "相良茉優", "田中ちえ美", "鬼頭明里", "内田秀", "前田佳織里", "村上奈津実", "小泉萌香"],
+  liella: ["伊達さゆり", "Liyuu", "岬なこ", "ペイトン尚未", "青山なぎさ", "鈴原希実", "薮島朱音", "大熊和奏", "絵森彩", "結那", "坂倉花"],
+  hasunosora: ["楡井希実", "野中ここな", "花宮初奈", "佐々木琴子", "菅叶和", "月音こな", "櫻井陽菜", "葉山風花", "来栖りん", "三宅美羽", "進藤あまね"],
+  ikizurai: ["綾咲穂音", "遠藤璃菜", "宮野芹", "藤野こころ", "坂野愛羽", "瀬古梨愛", "奥村優季", "天沢朱音", "小戸森穂花", "涼ノ瀬葵音"]
+};
+
+function deriveSeries(event) {
+  const related = new Set(Array.isArray(event.series) ? event.series : []);
+  const cast = Array.isArray(event.cast) ? event.cast : [event.cast].filter(Boolean);
+
+  Object.entries(castSeries).forEach(([series, names]) => {
+    if (cast.some(name => names.includes(String(name).replace(/[（(].*$/, "").trim()))) {
+      related.add(series);
+    }
+  });
+
+  if (event.title.includes("いきづらい部！")) related.add("ikizurai");
+  if (event.title.includes("スクールアイドルミュージカル")) related.add("musical");
+  if (event.title.includes("ラブライブ！フェス")) related.add("series");
+
+  return Object.keys(seriesDefinitions).filter(series => related.has(series));
+}
+
 const DEFAULT_VERIFIED_AT = "2026-09-09";
 const SEPTEMBER_VERIFIED_AT = "2026-09-10";
 
@@ -48,6 +85,7 @@ const venues = {
 function verifiedEvent({ endsAt = null, performanceLabel = "", note = "", sourceUrl = null, verifiedAt = DEFAULT_VERIFIED_AT, ...event }) {
   return {
     ...event,
+    series: deriveSeries(event),
     endsAt,
     performanceLabel,
     note,

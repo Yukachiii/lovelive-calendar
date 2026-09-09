@@ -1,4 +1,4 @@
-import { categories, events as verifiedEvents } from "./data/events.js";
+import { categories, events as verifiedEvents, seriesDefinitions } from "./data/events.js";
 import { StaticEventRepository } from "./services/event-repository.js";
 
 let events = [];
@@ -14,6 +14,13 @@ const now = new Date();
 let viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
 let activeCategories = new Set(Object.keys(categories));
 let selectedEventId = null;
+const filterState = {
+  query: "",
+  series: "all",
+  cast: "all",
+  region: "all",
+  status: "all"
+};
 
 function loadStatus(id) {
   return localStorage.getItem(`lovecale:${id}`) || "unset";
@@ -53,6 +60,15 @@ function castText(event) {
   return Array.isArray(event.cast) ? event.cast.join("、") : event.cast;
 }
 
+function normalizeCastName(name = "") {
+  return String(name).replace(/[（(].*$/, "").trim();
+}
+
+function seriesText(event) {
+  if (!event.series?.length) return "その他関連";
+  return event.series.map(series => seriesDefinitions[series]?.label || series).join("、");
+}
+
 function venueText(event, includeAddress = false) {
   if (typeof event.venue === "string") return event.venue;
   if (!event.venue) return "未定";
@@ -71,29 +87,145 @@ function scheduleText(event) {
   return `${event.date}　${parts.join(" / ")}`;
 }
 
-function renderFilters() {
-  const element = document.getElementById("filters");
-  element.innerHTML = "";
-  Object.entries(categories).forEach(([key, category]) => {
-    const label = document.createElement("label");
-    label.className = "filter";
-    label.innerHTML = `<input type="checkbox" ${activeCategories.has(key) ? "checked" : ""} data-cat="${key}">
-      <span class="legend-dot" style="background:${category.color}"></span>${category.label}`;
-    element.appendChild(label);
-  });
-  element.querySelectorAll("input").forEach(input => input.addEventListener("change", event => {
-    const key = event.target.dataset.cat;
-    event.target.checked ? activeCategories.add(key) : activeCategories.delete(key);
-    render();
-  }));
+function normalizeSearchText(value = "") {
+  return String(value).normalize("NFKC").toLocaleLowerCase("ja");
 }
 
-function currentMonthEvents() {
+function eventRegion(event) {
+  return event.venue?.prefecture || (event.venue?.id === "online" ? "online" : "unknown");
+}
+
+function unfilteredMonthEvents() {
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth() + 1;
   return events.filter(event => {
     const [eventYear, eventMonth] = event.date.split("-").map(Number);
-    return eventYear === year && eventMonth === month && activeCategories.has(event.category);
+    return eventYear === year && eventMonth === month;
+  });
+}
+
+function matchesQuery(event) {
+  if (!filterState.query) return true;
+  const searchable = [
+    event.title,
+    event.performanceLabel,
+    castText(event),
+    venueText(event, true),
+    seriesText(event),
+    event.venue?.prefecture
+  ].join(" ");
+  return normalizeSearchText(searchable).includes(normalizeSearchText(filterState.query));
+}
+
+function populateSelect(selectId, options) {
+  const select = document.getElementById(selectId);
+  select.replaceChildren(new Option("すべて", "all"));
+  options.forEach(({ value, label }) => select.add(new Option(label, value)));
+}
+
+function setupFilterControls() {
+  const categoryContainer = document.getElementById("categoryFilters");
+  Object.entries(categories).forEach(([key, category]) => {
+    const label = document.createElement("label");
+    label.className = "filter";
+    label.innerHTML = `<input type="checkbox" checked data-cat="${key}">
+      <span class="legend-dot" style="background:${category.color}"></span>${category.label}`;
+    categoryContainer.appendChild(label);
+  });
+
+  const availableSeries = new Set(events.flatMap(event => event.series || []));
+  const hasOtherSeries = events.some(event => !event.series?.length);
+  const seriesOptions = Object.entries(seriesDefinitions)
+    .filter(([key]) => availableSeries.has(key))
+    .map(([value, definition]) => ({ value, label: definition.label }));
+  if (hasOtherSeries) seriesOptions.push({ value: "other", label: "その他関連" });
+  populateSelect("seriesFilter", seriesOptions);
+
+  const castOptions = [...new Set(events.flatMap(event =>
+    (Array.isArray(event.cast) ? event.cast : [event.cast]).filter(Boolean).map(normalizeCastName)
+  ))].sort((a, b) => a.localeCompare(b, "ja")).map(value => ({ value, label: value }));
+  populateSelect("castFilter", castOptions);
+
+  const regions = [...new Set(events.map(eventRegion))].sort((a, b) => {
+    if (a === "online") return 1;
+    if (b === "online") return -1;
+    return a.localeCompare(b, "ja");
+  });
+  populateSelect("regionFilter", regions.map(value => ({
+    value,
+    label: value === "online" ? "オンライン" : value === "unknown" ? "地域未定" : value
+  })));
+
+  populateSelect("statusFilter", Object.entries(statusDef).map(([value, definition]) => ({
+    value,
+    label: definition.label
+  })));
+
+  categoryContainer.querySelectorAll("input").forEach(input => input.addEventListener("change", event => {
+    const category = event.target.dataset.cat;
+    event.target.checked ? activeCategories.add(category) : activeCategories.delete(category);
+    render();
+  }));
+
+  document.getElementById("queryFilter").addEventListener("input", event => {
+    filterState.query = event.target.value.trim();
+    render();
+  });
+  ["series", "cast", "region", "status"].forEach(filter => {
+    document.getElementById(`${filter}Filter`).addEventListener("change", event => {
+      filterState[filter] = event.target.value;
+      render();
+    });
+  });
+  document.getElementById("resetFilters").addEventListener("click", resetFilters);
+}
+
+function activeFilterCount() {
+  const selectFilters = ["series", "cast", "region", "status"]
+    .filter(filter => filterState[filter] !== "all").length;
+  const categoryFilter = activeCategories.size === Object.keys(categories).length ? 0 : 1;
+  return Number(Boolean(filterState.query)) + selectFilters + categoryFilter;
+}
+
+function syncFilterControls() {
+  const queryInput = document.getElementById("queryFilter");
+  if (queryInput.value !== filterState.query) queryInput.value = filterState.query;
+  ["series", "cast", "region", "status"].forEach(filter => {
+    const select = document.getElementById(`${filter}Filter`);
+    if (select.value !== filterState[filter]) select.value = filterState[filter];
+  });
+  document.querySelectorAll("#categoryFilters input").forEach(input => {
+    input.checked = activeCategories.has(input.dataset.cat);
+  });
+  const count = activeFilterCount();
+  document.getElementById("filterCount").textContent = count ? `${count}条件を適用中` : "条件なし";
+  document.getElementById("resetFilters").disabled = count === 0;
+}
+
+function resetFilters() {
+  filterState.query = "";
+  filterState.series = "all";
+  filterState.cast = "all";
+  filterState.region = "all";
+  filterState.status = "all";
+  activeCategories = new Set(Object.keys(categories));
+  render();
+}
+
+function currentMonthEvents() {
+  return unfilteredMonthEvents().filter(event => {
+    const seriesMatches = filterState.series === "all"
+      || (filterState.series === "other" ? !event.series?.length : event.series?.includes(filterState.series));
+    const castMatches = filterState.cast === "all"
+      || (Array.isArray(event.cast) ? event.cast : [event.cast]).some(name => normalizeCastName(name) === filterState.cast);
+    const regionMatches = filterState.region === "all" || eventRegion(event) === filterState.region;
+    const statusMatches = filterState.status === "all" || loadStatus(event.id) === filterState.status;
+    return activeCategories.has(event.category)
+      && seriesMatches
+      && castMatches
+      && regionMatches
+      && statusMatches
+      && matchesQuery(event);
   }).sort((a, b) => `${a.date}${a.startsAt}`.localeCompare(`${b.date}${b.startsAt}`));
 }
 
@@ -141,13 +273,16 @@ function renderCalendar() {
 function renderList() {
   const list = document.getElementById("eventList");
   const data = currentMonthEvents();
+  const total = unfilteredMonthEvents().length;
   const counts = { going: 0, maybe: 0, no: 0, unset: 0 };
   data.forEach(event => counts[loadStatus(event.id)] += 1);
   document.getElementById("summary").textContent =
-    `${data.length}公演 / 行く ${counts.going}・迷い ${counts.maybe}`;
+    `${data.length} / 全${total}公演　行く ${counts.going}・迷い ${counts.maybe}`;
 
   if (!data.length) {
-    list.innerHTML = '<div class="empty">表示するイベントがありません。</div>';
+    list.innerHTML = activeFilterCount()
+      ? '<div class="empty">条件に合うイベントがありません。<br>絞り込みを変更してください。</div>'
+      : '<div class="empty">表示するイベントがありません。</div>';
     return;
   }
 
@@ -165,7 +300,7 @@ function renderList() {
       </div>
       <h3>${escapeHtml(event.title)}</h3>
       ${event.performanceLabel ? `<div class="performance-label">${escapeHtml(event.performanceLabel)}</div>` : ""}
-      <div class="small">${escapeHtml(castText(event))}<br>${escapeHtml(venueText(event))}</div>
+      <div class="small">関連：${escapeHtml(seriesText(event))}<br>出演：${escapeHtml(castText(event))}<br>会場：${escapeHtml(venueText(event))}</div>
       <div class="status-row">
         ${Object.entries(statusDef).map(([key, definition]) =>
           `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
@@ -181,7 +316,7 @@ function renderList() {
 }
 
 function render() {
-  renderFilters();
+  syncFilterControls();
   renderCalendar();
   renderList();
 }
@@ -214,6 +349,7 @@ function openModal(id) {
     `<span class="category-chip" style="border-left:4px solid ${category.color}">${category.label}</span>`;
   document.getElementById("modalTitle").textContent = displayTitle(event);
   document.getElementById("modalDate").textContent = scheduleText(event);
+  document.getElementById("modalSeries").textContent = seriesText(event);
   document.getElementById("modalCast").textContent = castText(event);
   document.getElementById("modalVenue").textContent = venueText(event, true);
   document.getElementById("modalNote").textContent = event.note || "－";
@@ -253,6 +389,7 @@ document.addEventListener("keydown", event => {
 
 async function initialize(eventRepository = new StaticEventRepository(verifiedEvents)) {
   events = await eventRepository.listEvents();
+  setupFilterControls();
   render();
 }
 
