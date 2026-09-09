@@ -10,7 +10,8 @@ const statusDef = {
   unset: { label: "－ 未設定", short: "－", cls: "unset" }
 };
 
-let viewDate = new Date(2026, 9, 1);
+const now = new Date();
+let viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
 let activeCategories = new Set(Object.keys(categories));
 let selectedEventId = null;
 
