@@ -82,7 +82,7 @@ function venueText(event, includeAddress = false) {
 function scheduleText(event) {
   const parts = [
     event.doorsAt ? `開場 ${event.doorsAt}` : "開場 記載なし",
-    `開演 ${event.startsAt}`
+    event.startsAt ? `開演 ${event.startsAt}` : "開演 未定"
   ];
   if (event.endsAt) parts.push(`終了 ${event.endsAt}`);
   return `${event.date}　${parts.join(" / ")}`;
@@ -272,7 +272,7 @@ function currentMonthEvents() {
       && regionMatches
       && statusMatches
       && matchesQuery(event);
-  }).sort((a, b) => `${a.date}${a.startsAt}`.localeCompare(`${b.date}${b.startsAt}`));
+  }).sort((a, b) => `${a.date}${a.startsAt || "99:99"}`.localeCompare(`${b.date}${b.startsAt || "99:99"}`));
 }
 
 function renderCalendar() {
@@ -306,7 +306,7 @@ function renderCalendar() {
       button.innerHTML = `
         <div class="event-title">${escapeHtml(displayTitle(event))}</div>
         <div class="event-meta">
-          <span>${escapeHtml(event.startsAt)}</span>
+          <span>${escapeHtml(event.startsAt || "未定")}</span>
           <span class="status-badge">${statusDef[status].short}</span>
         </div>`;
       button.addEventListener("click", () => openModal(event.id));
@@ -341,7 +341,7 @@ function renderList() {
     card.className = "list-card";
     card.innerHTML = `
       <div class="list-top">
-        <div class="date-chip">${Number(month)}/${Number(day)} 開演 ${escapeHtml(event.startsAt)}</div>
+        <div class="date-chip">${Number(month)}/${Number(day)} 開演 ${escapeHtml(event.startsAt || "未定")}</div>
         <div class="category-chip" style="border-left:4px solid ${category.color}">${category.label}</div>
       </div>
       <h3>${escapeHtml(event.title)}</h3>

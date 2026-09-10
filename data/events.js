@@ -19,13 +19,13 @@ export const seriesDefinitions = {
 
 // UIと将来のAPIで共通利用する、シリーズ別のラブライブ！キャスト名簿です。
 // イベントの全出演者はallCastに残し、画面にはこの名簿に一致するcastだけを渡します。
-// 参照: https://www.lovelive-anime.jp/special/members/ （2026-09-10確認）
+// 参照: https://www.lovelive-anime.jp/special/members/ （2026-09-11確認）
 export const castBySeries = {
   muse: ["新田恵海", "南條愛乃", "内田彩", "三森すずこ", "飯田里穂", "Pile", "楠田亜衣奈", "久保ユリカ", "徳井青空"],
   aqours: ["伊波杏樹", "逢田梨香子", "諏訪ななか", "小宮有紗", "斉藤朱夏", "小林愛香", "高槻かなこ", "鈴木愛奈", "降幡愛"],
   nijigasaki: ["矢野妃菜喜", "大西亜玖璃", "相良茉優", "前田佳織里", "久保田未夢", "村上奈津実", "鬼頭明里", "楠木ともり", "林鼓子", "指出毬亜", "田中ちえ美", "小泉萌香", "内田秀", "法元明菜"],
   liella: ["伊達さゆり", "Liyuu", "岬なこ", "ペイトン尚未", "青山なぎさ", "鈴原希実", "薮島朱音", "大熊和奏", "絵森彩", "結那", "坂倉花"],
-  hasunosora: ["楡井希実", "野中ここな", "花宮初奈", "佐々木琴子", "菅叶和", "月音こな", "櫻井陽菜", "葉山風花", "来栖りん", "三宅美羽", "進藤あまね"],
+  hasunosora: ["楡井希実", "野中ここな", "花宮初奈", "佐々木琴子", "菅叶和", "月音こな", "櫻井陽菜", "葉山風花", "来栖りん", "三宅美羽", "進藤あまね", "星宮じゅりあ", "朝陽花菜", "湯浅かなえ"],
   ikizurai: ["綾咲穂音", "遠藤璃菜", "宮野芹", "藤野こころ", "坂野愛羽", "瀬古梨愛", "奥村優季", "天沢朱音", "小戸森穂花", "涼ノ瀬葵音"]
 };
 
@@ -58,6 +58,7 @@ function deriveSeries(event) {
 
 const DEFAULT_VERIFIED_AT = "2026-09-09";
 const SEPTEMBER_VERIFIED_AT = "2026-09-10";
+const FUTURE_VERIFIED_AT = "2026-09-11";
 
 // 会場を独立した形にしておくと、将来Supabaseのvenuesテーブルや
 // Mapbox用の緯度・経度へ移行しやすくなります。現時点では地図表示しません。
@@ -92,7 +93,16 @@ const venues = {
   hakuhinkanTheater: { id: "hakuhinkan-theater", name: "博品館劇場", prefecture: "東京都", address: "東京都中央区銀座8-8-11", coordinates: null },
   theaterMilanoZa: { id: "theater-milano-za", name: "THEATER MILANO-Za", prefecture: "東京都", address: null, coordinates: null },
   hotelSpringsMakuhari: { id: "hotel-springs-makuhari", name: "ホテルスプリングス幕張 スプリングスホール", prefecture: "千葉県", address: "千葉県千葉市美浜区ひび野1-11", coordinates: null },
-  suginamiHall: { id: "suginami-workers-welfare-hall", name: "杉並区勤労福祉会館", prefecture: "東京都", address: null, coordinates: null }
+  suginamiHall: { id: "suginami-workers-welfare-hall", name: "杉並区勤労福祉会館", prefecture: "東京都", address: null, coordinates: null },
+  vantelinDome: { id: "vantelin-dome-nagoya", name: "バンテリンドーム ナゴヤ", prefecture: "愛知県", address: "愛知県名古屋市東区大幸南1-1-1", coordinates: null },
+  numazuCivicCenter: { id: "numazu-civic-cultural-center", name: "沼津市民文化センター", prefecture: "静岡県", address: "静岡県沼津市御幸町15-1", coordinates: null },
+  ishikawaIndustryHall4: { id: "ishikawa-industrial-exhibition-hall-4", name: "石川県産業展示館 4号館", prefecture: "石川県", address: "石川県金沢市袋畠町南193", coordinates: null },
+  nipponBudokan: { id: "nippon-budokan", name: "日本武道館", prefecture: "東京都", address: "東京都千代田区北の丸公園2-3", coordinates: null },
+  ariakeArena: { id: "ariake-arena", name: "有明アリーナ", prefecture: "東京都", address: "東京都江東区有明1-11-1", coordinates: null },
+  marineMesseFukuokaB: { id: "marine-messe-fukuoka-hall-b", name: "マリンメッセ福岡B館", prefecture: "福岡県", address: "福岡県福岡市博多区沖浜町2-1", coordinates: null },
+  portMesseNagoya1: { id: "port-messe-nagoya-exhibition-hall-1", name: "ポートメッセなごや 第1展示館", prefecture: "愛知県", address: "愛知県名古屋市港区金城ふ頭3-2-1", coordinates: null },
+  kiraMesseNumazu: { id: "kira-messe-numazu", name: "キラメッセぬまづ", prefecture: "静岡県", address: "静岡県沼津市大手町1-1-4", coordinates: null },
+  lovecaFestival: { id: "loveca-festival-akihabara", name: "ベルサール秋葉原／アキバ・スクエア", prefecture: "東京都", address: null, coordinates: null }
 };
 
 function verifiedEvent({ endsAt = null, performanceLabel = "", note = "", sourceUrl = null, verifiedAt = DEFAULT_VERIFIED_AT, ...event }) {
@@ -117,6 +127,10 @@ function septemberEvent(event) {
   return verifiedEvent({ ...event, verifiedAt: SEPTEMBER_VERIFIED_AT });
 }
 
+function futureEvent(event) {
+  return verifiedEvent({ ...event, verifiedAt: FUTURE_VERIFIED_AT });
+}
+
 const liellaGamersUrl = "https://www.gamers.co.jp/contents/event_fair/detail.php?id=7324";
 const liellaAnimateUrl = "https://www.animate-onlineshop.jp/contents/fair_event/detail.php?id=114983";
 const nakoRadioUrl = "https://www.onsen.ag/program/nako#event";
@@ -132,6 +146,14 @@ const sherlockUrl = "https://hakuhinkantheater.com/sherlockholmes/";
 const hanamiyaUrl = "https://milano-za.jp/events/article?id=20261024";
 const konyaitoUrl = "https://nicochannel.jp/tsukine-kona/articles/news/ar5PYDswmxC6DLFNDWe2nMtX";
 const fioriUrl = "https://nkplanning.wixsite.com/nk-event/%E8%A4%87%E8%A3%BD-%E6%9C%97%E8%AA%AD%E3%81%A8%E6%AD%8C%E3%81%A8%E3%81%8A%E3%81%97%E3%82%83%E3%81%B9%E3%82%8A%E3%82%92%E3%81%8D%E3%81%BF%E3%81%A8-w-smmmiloop";
+const loveLiveFest15thUrl = "https://www.lovelive-anime.jp/special/live/live_detail.php?p=15th_lovelivefest";
+const wantedGhostUrl = "https://www.lovelive-anime.jp/uranohoshi/live/live_detail.php?p=Wanted_Ghost";
+const hasunosoraIshikawaUrl = "https://www.lovelive-anime.jp/hasunosora/live-event/live_detail.php?p=LLDream";
+const hasunosora106Url = "https://www.lovelive-anime.jp/hasunosora/live-event/live_detail.php?p=LLDream106";
+const hasunosora103Url = "https://www.lovelive-anime.jp/hasunosora/live-event/live_detail.php?p=LLDream103";
+const liella8thUrl = "https://www.lovelive-anime.jp/yuigaoka/live/live_detail.php?p=8thlivetour";
+const jimoai5thUrl = "https://www.lovelive-anime.jp/uranohoshi/live/live_detail.php?p=jimoai5th";
+const lovecaFestivalUrl = "https://llofficial-cardgame.com/news/cdbj/";
 
 const liellaTaiikusaiUrl = "https://www.lovelive-anime.jp/yuigaoka/live/live_detail.php?p=taiikusai";
 const onishiReleaseUrl = "https://columbia.jp/artist-info/onishiaguri/live/";
@@ -165,6 +187,28 @@ const liellaCast = [
 const ikizuraiCast = [
   "綾咲穂音", "遠藤璃菜", "宮野芹", "藤野こころ", "坂野愛羽",
   "瀬古梨愛", "奥村優季", "天沢朱音", "小戸森穂花", "涼ノ瀬葵音"
+];
+const hasunosoraIshikawaCast = [
+  "楡井希実", "野中ここな", "佐々木琴子", "菅叶和", "月音こな",
+  "櫻井陽菜", "葉山風花", "来栖りん", "三宅美羽", "進藤あまね"
+];
+const hasunosora106Cast = [
+  ...hasunosoraIshikawaCast, "星宮じゅりあ", "朝陽花菜", "湯浅かなえ"
+];
+const hasunosoraGraduationDay2Cast = [
+  "楡井希実", "花宮初奈", "野中ここな", "佐々木琴子", "菅叶和", "月音こな",
+  "櫻井陽菜", "葉山風花", "来栖りん", "三宅美羽", "進藤あまね"
+];
+const loveLiveFest15thCast = [
+  "新田恵海", "内田彩", "飯田里穂", "Pile", "久保ユリカ", "徳井青空",
+  "伊波杏樹", "逢田梨香子", "斉藤朱夏", "小林愛香", "高槻かなこ",
+  "大西亜玖璃", "相良茉優", "前田佳織里", "久保田未夢", "村上奈津実", "鬼頭明里",
+  "指出毬亜", "田中ちえ美", "小泉萌香", "内田秀", "法元明菜", "矢野妃菜喜",
+  ...liellaCast,
+  ...hasunosoraGraduationDay2Cast,
+  ...ikizuraiCast,
+  "堀内まり菜", "宮本佳林", "浅井七海", "南野巴那", "杏ジュリア",
+  "及川結依", "清水理子", "井上音生", "由良朱合", "村山結香"
 ];
 
 // 1レコードを1公演・1出演枠として扱います。
@@ -532,6 +576,85 @@ const candidateEvents = [
     doorsAt, startsAt, category: "stage",
     title: "朗読と歌とおしゃべりをきみと 〜W〜『Fioriのサプライズパーティー』", performanceLabel,
     cast: ["紫月杏朱彩", "梅澤めぐ", "菅叶和", "湊みや"], venue: venues.suginamiHall, officialUrl: fioriUrl
+  })),
+  ...[
+    ["day1", "2026-11-14", "Day.1", "14:30", "16:30"],
+    ["day2", "2026-11-15", "Day.2", "13:30", "15:30"]
+  ].map(([suffix, date, performanceLabel, doorsAt, startsAt]) => futureEvent({
+    id: `lovelive-fest-15th-${suffix}`, eventGroupId: "lovelive-fest-15th-20261114-15", date,
+    doorsAt, startsAt, category: "official", title: "LoveLive! Series 15th Anniversary ラブライブ！フェス", performanceLabel,
+    cast: loveLiveFest15thCast, series: ["series", "musical"], venue: venues.vantelinDome, officialUrl: loveLiveFest15thUrl
+  })),
+  ...[
+    ["20261122-day", "2026-11-22", "Day.1 昼公演／拒絶への恐怖 - Fear of Rejection -", "12:30", "13:30"],
+    ["20261122-night", "2026-11-22", "Day.1 夜公演／境遇への反発 - Against Odds -", "16:30", "17:30"],
+    ["20261123-day", "2026-11-23", "Day.2 昼公演／結果への焦燥 - Chasing Results -", "12:30", "13:30"],
+    ["20261123-night", "2026-11-23", "Day.2 夜公演／魂の重奏 - Ensemble of Souls -", "16:30", "17:30"]
+  ].map(([suffix, date, performanceLabel, doorsAt, startsAt]) => futureEvent({
+    id: `wanted-ghost-${suffix}`, eventGroupId: "wanted-ghost-20261122-23", date,
+    doorsAt, startsAt, category: "official", title: "Guilty Kiss Musical Performance 漆黒のWanted Ghost", performanceLabel,
+    cast: [], series: ["aqours"], venue: venues.numazuCivicCenter, officialUrl: wantedGhostUrl,
+    note: "3DCGミュージカルのため、キャストの登壇はありません。"
+  })),
+  ...[
+    ["day1", "2026-11-28", "Day.1", "15:30", "16:30"],
+    ["day2", "2026-11-29", "Day.2", "14:30", "15:30"]
+  ].map(([suffix, date, performanceLabel, doorsAt, startsAt]) => futureEvent({
+    id: `hasunosora-ishikawa2-${suffix}`, eventGroupId: "hasunosora-ishikawa2-20261128-29", date,
+    doorsAt, startsAt, category: "official",
+    title: "ラブライブ！蓮ノ空女学院スクールアイドルクラブ Link Live Dream ～おいでよ！石川大観光Ⅱ～", performanceLabel,
+    cast: hasunosoraIshikawaCast, venue: venues.ishikawaIndustryHall4, officialUrl: hasunosoraIshikawaUrl
+  })),
+  futureEvent({
+    id: "hasunosora-106-membership-20270122", eventGroupId: "hasunosora-budokan-20270122-24", date: "2027-01-22",
+    doorsAt: "16:00", startsAt: "17:00", category: "official",
+    title: "ラブライブ！蓮ノ空女学院スクールアイドルクラブ Link Live Dream ～106期新入生入部記念公演～",
+    cast: hasunosora106Cast, venue: venues.nipponBudokan, officialUrl: hasunosora106Url
+  }),
+  ...[
+    ["day1", "2027-01-23", "Day.1", "16:00", "17:00", hasunosoraIshikawaCast],
+    ["day2", "2027-01-24", "Day.2", "14:30", "15:30", hasunosoraGraduationDay2Cast]
+  ].map(([suffix, date, performanceLabel, doorsAt, startsAt, cast]) => futureEvent({
+    id: `hasunosora-103-graduation-${suffix}`, eventGroupId: "hasunosora-budokan-20270122-24", date,
+    doorsAt, startsAt, category: "official",
+    title: "ラブライブ！蓮ノ空女学院スクールアイドルクラブ Link Live Dream ～103期卒業公演～", performanceLabel,
+    cast, venue: venues.nipponBudokan, officialUrl: hasunosora103Url,
+    note: suffix === "day1" ? "花宮初奈はDay.2のみ出演します。" : ""
+  })),
+  ...[
+    ["day1", "2027-02-20", "Day.1"],
+    ["day2", "2027-02-21", "Day.2"]
+  ].map(([suffix, date, performanceLabel]) => futureEvent({
+    id: `loveca-festival-2027-${suffix}`, eventGroupId: "loveca-festival-2027", date,
+    doorsAt: null, startsAt: null, category: "official", title: "ラブカ感謝祭2027", performanceLabel,
+    cast: [], series: ["series"], venue: venues.lovecaFestival, officialUrl: lovecaFestivalUrl,
+    note: "開催時間・出演者・詳しい内容は公式発表待ちです。"
+  })),
+  ...[
+    ["tokyo-day1", "2027-03-06", "東京公演 Day.1", venues.ariakeArena],
+    ["tokyo-day2", "2027-03-07", "東京公演 Day.2", venues.ariakeArena],
+    ["fukuoka-day1", "2027-04-24", "福岡公演 Day.1", venues.marineMesseFukuokaB],
+    ["fukuoka-day2", "2027-04-25", "福岡公演 Day.2", venues.marineMesseFukuokaB],
+    ["aichi-day1", "2027-05-08", "愛知公演 Day.1", venues.portMesseNagoya1],
+    ["aichi-day2", "2027-05-09", "愛知公演 Day.2", venues.portMesseNagoya1]
+  ].map(([suffix, date, performanceLabel, venue]) => futureEvent({
+    id: `liella-8th-${suffix}`, eventGroupId: "liella-8th-tour-2027", date,
+    doorsAt: null, startsAt: null, category: "official",
+    title: "ラブライブ！スーパースター!! Liella! 8th LoveLive! Tour ～Our Song, Our Dreams～", performanceLabel,
+    cast: liellaCast, venue, officialUrl: liella8thUrl,
+    note: "開場・開演時間は公式発表待ちです。"
+  })),
+  ...[
+    ["20270320-day", "2027-03-20", "Day.1 昼公演", "13:00", "14:00", ["伊波杏樹", "小宮有紗", "降幡愛"]],
+    ["20270320-night", "2027-03-20", "Day.1 夜公演", "17:30", "18:30", ["伊波杏樹", "小宮有紗", "降幡愛"]],
+    ["20270321-day", "2027-03-21", "Day.2 昼公演", "13:00", "14:00", ["逢田梨香子", "高槻かなこ", "鈴木愛奈"]],
+    ["20270321-night", "2027-03-21", "Day.2 夜公演", "17:30", "18:30", ["逢田梨香子", "高槻かなこ", "鈴木愛奈"]],
+    ["20270322-day", "2027-03-22", "Day.3 昼公演", "13:00", "14:00", ["諏訪ななか", "斉藤朱夏", "小林愛香"]],
+    ["20270322-night", "2027-03-22", "Day.3 夜公演", "17:30", "18:30", ["諏訪ななか", "斉藤朱夏", "小林愛香"]]
+  ].map(([suffix, date, performanceLabel, doorsAt, startsAt, cast]) => futureEvent({
+    id: `jimoai5th-${suffix}`, eventGroupId: "jimoai5th-20270320-22", date,
+    doorsAt, startsAt, category: "official", title: "ラブライブ！サンシャイン!! 第5回沼津地元愛まつり", performanceLabel,
+    cast, venue: venues.kiraMesseNumazu, officialUrl: jimoai5thUrl
   }))
 ];
 
