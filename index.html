@@ -69,21 +69,29 @@
       </div>
     </section>
 
-    <main class="layout">
-      <section class="calendar">
-        <div class="weekdays">
-          <div class="weekday">日</div>
-          <div class="weekday">月</div>
-          <div class="weekday">火</div>
-          <div class="weekday">水</div>
-          <div class="weekday">木</div>
-          <div class="weekday">金</div>
-          <div class="weekday">土</div>
+    <div class="mobile-view-switch" role="group" aria-label="表示方法">
+      <button type="button" data-mobile-view="list" aria-controls="listView" aria-pressed="true">一覧</button>
+      <button type="button" data-mobile-view="calendar" aria-controls="calendarView" aria-pressed="false">カレンダー</button>
+    </div>
+
+    <main class="layout" id="viewContainer" data-mobile-view="list">
+      <section class="calendar" id="calendarView">
+        <div class="mobile-calendar-hint">左右にスワイプして確認できます。</div>
+        <div class="calendar-scroll">
+          <div class="weekdays">
+            <div class="weekday">日</div>
+            <div class="weekday">月</div>
+            <div class="weekday">火</div>
+            <div class="weekday">水</div>
+            <div class="weekday">木</div>
+            <div class="weekday">金</div>
+            <div class="weekday">土</div>
+          </div>
+          <div class="grid" id="calendarGrid"></div>
         </div>
-        <div class="grid" id="calendarGrid"></div>
       </section>
 
-      <aside class="sidebar">
+      <aside class="sidebar" id="listView">
         <h2>今月のイベント</h2>
         <div class="hint">ステータスは自動でブラウザに保存されます。</div>
         <div class="event-list" id="eventList"></div>

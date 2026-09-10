@@ -367,6 +367,14 @@ function render() {
   renderList();
 }
 
+function setMobileView(view) {
+  if (!["list", "calendar"].includes(view)) return;
+  document.getElementById("viewContainer").dataset.mobileView = view;
+  document.querySelectorAll("[data-mobile-view]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.mobileView === view));
+  });
+}
+
 function renderSourceLinks(event) {
   const container = document.getElementById("modalSources");
   container.replaceChildren();
@@ -428,6 +436,9 @@ document.getElementById("nextMonth").addEventListener("click", () => {
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modalBackdrop").addEventListener("click", event => {
   if (event.target.id === "modalBackdrop") closeModal();
+});
+document.querySelectorAll("[data-mobile-view]").forEach(button => {
+  button.addEventListener("click", () => setMobileView(button.dataset.mobileView));
 });
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") closeModal();
