@@ -20,10 +20,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Restore collector state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .automation-cache
           key: event-source-state-${{ github.run_id }}
@@ -35,7 +35,7 @@ jobs:
         run: node scripts/collect-events.mjs
 
       - name: Upload collection report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: event-collection-report-${{ github.run_id }}
           path: automation-output/
@@ -48,7 +48,7 @@ jobs:
         run: gh issue create --title "[自動収集] イベント情報の更新候補" --body-file automation-output/report.md
 
       - name: Save collector state
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .automation-cache
           key: event-source-state-${{ github.run_id }}
