@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "lookbackDays": 30,
+  "requestDelayMs": 250,
+  "timeoutMs": 20000,
+  "monitorPublishedOfficialUrls": true,
+  "newsSources": [
+    {
+      "id": "lovelive-series-news",
+      "label": "ラブライブ！シリーズ公式ニュース",
+      "urlTemplate": "https://www.lovelive-anime.jp/news/?page={page}",
+      "pages": 10,
+      "categories": [
+        "ライブ/イベント",
+        "ご当地情報",
+        "劇場",
+        "音楽商品",
+        "キャスト配信/ラジオ",
+        "その他"
+      ]
+    }
+  ],
+  "linkSources": [
+    {
+      "id": "lovehigh-live-index",
+      "label": "いきづらい部！公式ライブ一覧",
+      "url": "https://www.lovelive-anime.jp/lovehigh/live/",
+      "allowUrlPattern": "^https://www\\.lovelive-anime\\.jp/lovehigh/live/live_detail\\.php"
+    },
+    {
+      "id": "hasunosora-live-index",
+      "label": "蓮ノ空公式ライブ一覧",
+      "url": "https://www.lovelive-anime.jp/hasunosora/live-event/",
+      "allowUrlPattern": "^https://www\\.lovelive-anime\\.jp/hasunosora/live-event/live_detail\\.php"
+    },
+    {
+      "id": "liella-live-index",
+      "label": "Liella!公式ライブ一覧",
+      "url": "https://www.lovelive-anime.jp/yuigaoka/live/",
+      "allowUrlPattern": "^https://www\\.lovelive-anime\\.jp/yuigaoka/live/live_detail\\.php"
+    },
+    {
+      "id": "nijigasaki-live-index",
+      "label": "虹ヶ咲公式ライブ一覧",
+      "url": "https://www.lovelive-anime.jp/nijigasaki/live.php",
+      "allowUrlPattern": "^https://www\\.lovelive-anime\\.jp/nijigasaki/live/live_detail\\.php"
+    },
+    {
+      "id": "aqours-live-index",
+      "label": "Aqours公式ライブ一覧",
+      "url": "https://www.lovelive-anime.jp/uranohoshi/live/",
+      "allowUrlPattern": "^https://www\\.lovelive-anime\\.jp/uranohoshi/live/(?:live/)?live_detail\\.php"
+    }
+  ],
+  "seedCandidateSources": [
+    {
+      "id": "lovelive-orchestra-2027",
+      "label": "LoveLive! Orchestra Concert＜2027年公演＞",
+      "url": "https://www.lovelive-anime.jp/otonokizaka/event/lovelive_orchestra2027/"
+    }
+  ]
+}
+

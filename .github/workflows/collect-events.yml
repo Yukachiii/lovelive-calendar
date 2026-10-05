@@ -1,0 +1,55 @@
+name: Collect event updates
+
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC。日本時間では、おおむね 03:17 / 09:17 / 15:17 / 21:17 に実行されます。
+    - cron: "17 0,6,12,18 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: collect-event-updates
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore collector state
+        uses: actions/cache/restore@v4
+        with:
+          path: .automation-cache
+          key: event-source-state-${{ github.run_id }}
+          restore-keys: |
+            event-source-state-
+
+      - name: Collect event candidates and changes
+        id: collect
+        run: node scripts/collect-events.mjs
+
+      - name: Upload collection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: event-collection-report-${{ github.run_id }}
+          path: automation-output/
+          retention-days: 14
+
+      - name: Open a review issue
+        if: steps.collect.outputs.has_alerts == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "[自動収集] イベント情報の更新候補" --body-file automation-output/report.md
+
+      - name: Save collector state
+        uses: actions/cache/save@v4
+        with:
+          path: .automation-cache
+          key: event-source-state-${{ github.run_id }}
+
