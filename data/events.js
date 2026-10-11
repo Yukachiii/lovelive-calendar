@@ -141,7 +141,7 @@ const sakakuraUrl = "https://aruarucity.com/event/?act=Detail&mode=View&e_id=000
 const sagaraKitoUrl = "https://aruarucity.com/event/?act=Detail&mode=View&e_id=00002438";
 const inamiTourUrl = "https://www.sma.co.jp/s/sma/music/inamianju_ticket";
 const characterMixUrl = "https://eplus.jp/sf/detail/4551510001-P0030002P021001?P6=001";
-const podcastUrl = "https://audee-membership.jp/cocona-nonaka/articles/news/arH3damGggnJVU5WsP7bGhFv";
+const podcastUrl = "https://t.pia.jp/pia/event/event.do?eventCd=2629151";
 const sherlockUrl = "https://hakuhinkantheater.com/sherlockholmes/";
 const hanamiyaUrl = "https://milano-za.jp/events/article?id=20261024";
 const konyaitoUrl = "https://nicochannel.jp/tsukine-kona/articles/news/ar5PYDswmxC6DLFNDWe2nMtX";
