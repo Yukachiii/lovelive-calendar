@@ -1,8 +1,10 @@
 import { castBySeries, categories, events as verifiedEvents, seriesDefinitions } from "./data/events.js";
 import { groupEventsByDate } from "./services/event-grouper.js";
 import { StaticEventRepository } from "./services/event-repository.js";
+import { createEventStatusStore } from "./services/event-status-store.js";
 
 let events = [];
+const statusStore = createEventStatusStore(localStorage);
 
 const statusDef = {
   going: { label: "○ 行く", short: "○", cls: "going" },
@@ -23,28 +25,10 @@ const filterState = {
   status: "all"
 };
 
-function storedStatus(id) {
-  return localStorage.getItem(`lovecale:${id}`);
-}
-
-function loadStatus(eventOrId) {
-  if (typeof eventOrId === "string") {
-    return storedStatus(eventOrId) || "unset";
-  }
-
-  const currentStatus = storedStatus(eventOrId.id);
-  if (currentStatus) return currentStatus;
-
-  const legacyStatuses = (eventOrId.sourceEventIds || [])
-    .map(storedStatus)
-    .filter(Boolean);
-  return ["going", "maybe", "no"].find(status => legacyStatuses.includes(status)) || "unset";
-}
-
 function saveStatus(id, status) {
-  localStorage.setItem(`lovecale:${id}`, status);
+  statusStore.set(id, status);
   render();
-  if (selectedEventId === id) openModal(id);
+  if (selectedEventId) openModal(selectedEventId);
 }
 
 function ymd(date) {
@@ -116,7 +100,13 @@ function performanceTimeText(performance) {
   return parts.join(" / ");
 }
 
-function performanceListHtml(event) {
+function statusOptionsHtml(status) {
+  return Object.entries(statusDef).map(([key, definition]) =>
+    `<option value="${key}"${status === key ? " selected" : ""}>${definition.label}</option>`
+  ).join("");
+}
+
+function performanceListHtml(event, { showStatus = false } = {}) {
   if (!event.isMultiPerformance) {
     return event.performanceLabel
       ? `<div class="performance-label">${escapeHtml(event.performanceLabel)}</div>`
@@ -128,8 +118,21 @@ function performanceListHtml(event) {
       <div class="performance-item">
         <span class="performance-name">${escapeHtml(performanceName(performance, index))}</span>
         <span class="performance-time">${escapeHtml(performanceTimeText(performance))}</span>
+        ${showStatus ? `
+          <label class="performance-status-label">
+            <span class="sr-only">${escapeHtml(performanceName(performance, index))}の参加ステータス</span>
+            <select class="performance-status-select" data-event-id="${escapeHtml(performance.id)}">
+              ${statusOptionsHtml(statusStore.get(performance.id))}
+            </select>
+          </label>` : ""}
       </div>`).join("")}
   </div>`;
+}
+
+function bindPerformanceStatusControls(container) {
+  container.querySelectorAll(".performance-status-select").forEach(select => {
+    select.addEventListener("change", () => saveStatus(select.dataset.eventId, select.value));
+  });
 }
 
 function categoryChipsHtml(event) {
@@ -317,7 +320,7 @@ function currentMonthEvents() {
     const castMatches = filterState.cast === "all"
       || (Array.isArray(event.cast) ? event.cast : [event.cast]).some(name => normalizeCastName(name) === filterState.cast);
     const regionMatches = filterState.region === "all" || eventRegion(event) === filterState.region;
-    const statusMatches = filterState.status === "all" || loadStatus(event) === filterState.status;
+    const statusMatches = statusStore.eventMatchesStatus(event, filterState.status);
     const categoryMatches = (event.categoryKeys || [event.category])
       .some(category => activeCategories.has(category));
     return categoryMatches
@@ -327,6 +330,15 @@ function currentMonthEvents() {
       && statusMatches
       && matchesQuery(event);
   }).sort((a, b) => `${a.date}${a.startsAt || "99:99"}`.localeCompare(`${b.date}${b.startsAt || "99:99"}`));
+}
+
+function calendarStatusText(event) {
+  if (!event.isMultiPerformance) return statusDef[statusStore.get(event.id)].short;
+  const counts = statusStore.getEventCounts(event);
+  return Object.keys(statusDef)
+    .filter(status => counts[status] > 0)
+    .map(status => `${statusDef[status].short}${counts[status]}`)
+    .join(" ");
 }
 
 function renderCalendar() {
@@ -353,7 +365,6 @@ function renderCalendar() {
     const eventContainer = cell.querySelector(".events");
 
     (byDate[key] || []).forEach(event => {
-      const status = loadStatus(event);
       const button = document.createElement("button");
       button.className = "event";
       button.style.borderLeftColor = categories[event.category].color;
@@ -361,7 +372,7 @@ function renderCalendar() {
         <div class="event-title">${escapeHtml(displayTitle(event))}</div>
         <div class="event-meta">
           <span>${event.isMultiPerformance ? `${event.performances.length}公演` : escapeHtml(event.startsAt || "未定")}</span>
-          <span class="status-badge">${statusDef[status].short}</span>
+          <span class="status-badge">${calendarStatusText(event)}</span>
         </div>`;
       button.addEventListener("click", () => openModal(event.id));
       eventContainer.appendChild(button);
@@ -374,10 +385,11 @@ function renderList() {
   const list = document.getElementById("eventList");
   const data = currentMonthEvents();
   const total = unfilteredMonthEvents().length;
-  const counts = { going: 0, maybe: 0, no: 0, unset: 0 };
-  data.forEach(event => counts[loadStatus(event)] += 1);
+  const counts = statusStore.countPerformances(data);
+  const performanceCount = data.reduce((sum, event) => sum + event.performances.length, 0);
   document.getElementById("summary").textContent =
-    `${data.length} / 全${total}件　行く ${counts.going}・迷い ${counts.maybe}`;
+    `${data.length} / 全${total}イベント（表示${performanceCount}公演）　` +
+    `行く ${counts.going}・迷い ${counts.maybe}・行かない ${counts.no}・未設定 ${counts.unset}`;
 
   if (!data.length) {
     list.innerHTML = activeFilterCount()
@@ -388,7 +400,7 @@ function renderList() {
 
   list.innerHTML = "";
   data.forEach(event => {
-    const status = loadStatus(event);
+    const status = statusStore.get(event.id);
     const [, month, day] = event.date.split("-");
     const card = document.createElement("div");
     card.className = "list-card";
@@ -398,13 +410,14 @@ function renderList() {
         <div class="category-chips">${categoryChipsHtml(event)}</div>
       </div>
       <h3>${escapeHtml(event.title)}</h3>
-      ${performanceListHtml(event)}
+      ${performanceListHtml(event, { showStatus: true })}
       <div class="small">関連：${escapeHtml(seriesText(event))}<br>関連キャスト：${escapeHtml(castText(event))}<br>会場：${escapeHtml(venueText(event))}</div>
-      <div class="status-row">
+      ${event.isMultiPerformance ? "" : `<div class="status-row">
         ${Object.entries(statusDef).map(([key, definition]) =>
           `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
         ).join("")}
-      </div>`;
+      </div>`}`;
+    bindPerformanceStatusControls(card);
     card.querySelectorAll(".status-btn").forEach(button =>
       button.addEventListener("click", () => saveStatus(event.id, button.dataset.status))
     );
@@ -467,7 +480,8 @@ function renderModalSchedule(event) {
 
   container.innerHTML = `
     <div class="modal-event-date">${escapeHtml(event.date)}</div>
-    ${performanceListHtml(event)}`;
+    ${performanceListHtml(event, { showStatus: true })}`;
+  bindPerformanceStatusControls(container);
 }
 
 function openModal(id) {
@@ -484,10 +498,12 @@ function openModal(id) {
   document.getElementById("modalVerifiedAt").textContent = `${event.verifiedAt} 時点`;
   renderSourceLinks(event);
 
-  const status = loadStatus(event);
-  document.getElementById("modalStatus").innerHTML = Object.entries(statusDef).map(([key, definition]) =>
-    `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
-  ).join("");
+  const status = statusStore.get(event.id);
+  document.getElementById("modalStatus").innerHTML = event.isMultiPerformance
+    ? ""
+    : Object.entries(statusDef).map(([key, definition]) =>
+      `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
+    ).join("");
   document.querySelectorAll("#modalStatus .status-btn").forEach(button =>
     button.addEventListener("click", () => saveStatus(id, button.dataset.status))
   );
@@ -520,6 +536,7 @@ document.addEventListener("keydown", event => {
 
 async function initialize(eventRepository = new StaticEventRepository(verifiedEvents)) {
   events = groupEventsByDate(await eventRepository.listEvents());
+  statusStore.migrateEvents(events);
   setupFilterControls();
   render();
 }
