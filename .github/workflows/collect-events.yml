@@ -41,11 +41,40 @@ jobs:
           path: automation-output/
           retention-days: 14
 
-      - name: Open a review issue
+      - name: Update the review issue
         if: steps.collect.outputs.has_alerts == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh issue create --title "[自動収集] イベント情報の更新候補" --body-file automation-output/report.md
+        run: |
+          label="automation:event-monitor"
+          title="[自動収集] 要確認イベント情報"
+
+          gh label create "$label" \
+            --color "1D76DB" \
+            --description "イベント自動収集の確認対象" \
+            --force
+
+          printf '\n---\n[この実行の詳細](%s/%s/actions/runs/%s)\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" \
+            >> automation-output/report.md
+
+          issue_number="$(gh issue list \
+            --state open \
+            --label "$label" \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number')"
+
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" \
+              --title "$title" \
+              --body-file automation-output/report.md
+          else
+            gh issue create \
+              --title "$title" \
+              --label "$label" \
+              --body-file automation-output/report.md
+          fi
 
       - name: Save collector state
         uses: actions/cache/save@v6

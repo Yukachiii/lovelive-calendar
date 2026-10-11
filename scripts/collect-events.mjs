@@ -352,10 +352,10 @@ async function fetchHtml(url, config) {
   };
 }
 
-function publishedUrlMap() {
+function publishedUrlMap(today) {
   const map = new Map();
   for (const event of events) {
-    if (!event.officialUrl) continue;
+    if (!event.officialUrl || event.date < today) continue;
     const url = normalizeUrl(event.officialUrl);
     if (!map.has(url)) map.set(url, new Set());
     map.get(url).add(`${event.date} ${event.title}${event.performanceLabel ? ` ${event.performanceLabel}` : ""}`);
@@ -469,7 +469,7 @@ async function main() {
   cutoff.setUTCDate(cutoff.getUTCDate() - config.lookbackDays);
   const cutoffIso = cutoff.toISOString().slice(0, 10);
   const castNames = unique(Object.values(castBySeries).flat());
-  const published = publishedUrlMap();
+  const published = publishedUrlMap(today);
   const publishedReferences = publishedReferenceUrls();
   const candidateMap = new Map();
   const monitorMap = new Map();
@@ -661,6 +661,10 @@ async function main() {
       };
       runErrors.push({ label: monitor.label, url: monitor.url, error: error.message });
     }
+  }
+
+  for (const url of Object.keys(state.sources)) {
+    if (!monitorMap.has(url)) delete state.sources[url];
   }
 
   const newCandidates = [...candidateMap.values()].sort((left, right) => {
