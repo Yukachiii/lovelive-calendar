@@ -1,4 +1,5 @@
 import { castBySeries, categories, events as verifiedEvents, seriesDefinitions } from "./data/events.js";
+import { groupEventsByDate } from "./services/event-grouper.js";
 import { StaticEventRepository } from "./services/event-repository.js";
 
 let events = [];
@@ -22,8 +23,22 @@ const filterState = {
   status: "all"
 };
 
-function loadStatus(id) {
-  return localStorage.getItem(`lovecale:${id}`) || "unset";
+function storedStatus(id) {
+  return localStorage.getItem(`lovecale:${id}`);
+}
+
+function loadStatus(eventOrId) {
+  if (typeof eventOrId === "string") {
+    return storedStatus(eventOrId) || "unset";
+  }
+
+  const currentStatus = storedStatus(eventOrId.id);
+  if (currentStatus) return currentStatus;
+
+  const legacyStatuses = (eventOrId.sourceEventIds || [])
+    .map(storedStatus)
+    .filter(Boolean);
+  return ["going", "maybe", "no"].find(status => legacyStatuses.includes(status)) || "unset";
 }
 
 function saveStatus(id, status) {
@@ -88,6 +103,42 @@ function scheduleText(event) {
   return `${event.date}　${parts.join(" / ")}`;
 }
 
+function performanceName(performance, index) {
+  return performance.performanceLabel || `公演 ${index + 1}`;
+}
+
+function performanceTimeText(performance) {
+  const parts = [
+    performance.doorsAt ? `開場 ${performance.doorsAt}` : "開場 記載なし",
+    performance.startsAt ? `開演 ${performance.startsAt}` : "開演 未定"
+  ];
+  if (performance.endsAt) parts.push(`終了 ${performance.endsAt}`);
+  return parts.join(" / ");
+}
+
+function performanceListHtml(event) {
+  if (!event.isMultiPerformance) {
+    return event.performanceLabel
+      ? `<div class="performance-label">${escapeHtml(event.performanceLabel)}</div>`
+      : "";
+  }
+
+  return `<div class="performance-list">
+    ${event.performances.map((performance, index) => `
+      <div class="performance-item">
+        <span class="performance-name">${escapeHtml(performanceName(performance, index))}</span>
+        <span class="performance-time">${escapeHtml(performanceTimeText(performance))}</span>
+      </div>`).join("")}
+  </div>`;
+}
+
+function categoryChipsHtml(event) {
+  return (event.categoryKeys || [event.category]).map(categoryKey => {
+    const category = categories[categoryKey];
+    return `<span class="category-chip" style="border-left:4px solid ${category.color}">${escapeHtml(category.label)}</span>`;
+  }).join("");
+}
+
 function normalizeSearchText(value = "") {
   return String(value).normalize("NFKC").toLocaleLowerCase("ja");
 }
@@ -110,6 +161,7 @@ function matchesQuery(event) {
   const searchable = [
     event.title,
     event.performanceLabel,
+    event.performances?.map(performance => performance.performanceLabel).join(" "),
     castText(event),
     venueText(event, true),
     seriesText(event),
@@ -265,8 +317,10 @@ function currentMonthEvents() {
     const castMatches = filterState.cast === "all"
       || (Array.isArray(event.cast) ? event.cast : [event.cast]).some(name => normalizeCastName(name) === filterState.cast);
     const regionMatches = filterState.region === "all" || eventRegion(event) === filterState.region;
-    const statusMatches = filterState.status === "all" || loadStatus(event.id) === filterState.status;
-    return activeCategories.has(event.category)
+    const statusMatches = filterState.status === "all" || loadStatus(event) === filterState.status;
+    const categoryMatches = (event.categoryKeys || [event.category])
+      .some(category => activeCategories.has(category));
+    return categoryMatches
       && seriesMatches
       && castMatches
       && regionMatches
@@ -299,14 +353,14 @@ function renderCalendar() {
     const eventContainer = cell.querySelector(".events");
 
     (byDate[key] || []).forEach(event => {
-      const status = loadStatus(event.id);
+      const status = loadStatus(event);
       const button = document.createElement("button");
       button.className = "event";
       button.style.borderLeftColor = categories[event.category].color;
       button.innerHTML = `
         <div class="event-title">${escapeHtml(displayTitle(event))}</div>
         <div class="event-meta">
-          <span>${escapeHtml(event.startsAt || "未定")}</span>
+          <span>${event.isMultiPerformance ? `${event.performances.length}公演` : escapeHtml(event.startsAt || "未定")}</span>
           <span class="status-badge">${statusDef[status].short}</span>
         </div>`;
       button.addEventListener("click", () => openModal(event.id));
@@ -321,9 +375,9 @@ function renderList() {
   const data = currentMonthEvents();
   const total = unfilteredMonthEvents().length;
   const counts = { going: 0, maybe: 0, no: 0, unset: 0 };
-  data.forEach(event => counts[loadStatus(event.id)] += 1);
+  data.forEach(event => counts[loadStatus(event)] += 1);
   document.getElementById("summary").textContent =
-    `${data.length} / 全${total}公演　行く ${counts.going}・迷い ${counts.maybe}`;
+    `${data.length} / 全${total}件　行く ${counts.going}・迷い ${counts.maybe}`;
 
   if (!data.length) {
     list.innerHTML = activeFilterCount()
@@ -334,18 +388,17 @@ function renderList() {
 
   list.innerHTML = "";
   data.forEach(event => {
-    const status = loadStatus(event.id);
+    const status = loadStatus(event);
     const [, month, day] = event.date.split("-");
-    const category = categories[event.category];
     const card = document.createElement("div");
     card.className = "list-card";
     card.innerHTML = `
       <div class="list-top">
-        <div class="date-chip">${Number(month)}/${Number(day)} 開演 ${escapeHtml(event.startsAt || "未定")}</div>
-        <div class="category-chip" style="border-left:4px solid ${category.color}">${category.label}</div>
+        <div class="date-chip">${Number(month)}/${Number(day)} ${event.isMultiPerformance ? `${event.performances.length}公演` : `開演 ${escapeHtml(event.startsAt || "未定")}`}</div>
+        <div class="category-chips">${categoryChipsHtml(event)}</div>
       </div>
       <h3>${escapeHtml(event.title)}</h3>
-      ${event.performanceLabel ? `<div class="performance-label">${escapeHtml(event.performanceLabel)}</div>` : ""}
+      ${performanceListHtml(event)}
       <div class="small">関連：${escapeHtml(seriesText(event))}<br>関連キャスト：${escapeHtml(castText(event))}<br>会場：${escapeHtml(venueText(event))}</div>
       <div class="status-row">
         ${Object.entries(statusDef).map(([key, definition]) =>
@@ -378,10 +431,21 @@ function setMobileView(view) {
 function renderSourceLinks(event) {
   const container = document.getElementById("modalSources");
   container.replaceChildren();
-  const sources = [{ label: "公式ページを開く", url: event.officialUrl }];
-  if (event.sourceUrl && event.sourceUrl !== event.officialUrl) {
-    sources.push({ label: "補足した情報源を開く", url: event.sourceUrl });
-  }
+  const performances = event.performances || [event];
+  const sources = [];
+  const seenUrls = new Set();
+  const addSource = (label, url) => {
+    if (!url || seenUrls.has(url)) return;
+    seenUrls.add(url);
+    sources.push({ label, url });
+  };
+
+  performances.forEach(performance => addSource("公式ページを開く", performance.officialUrl));
+  performances.forEach(performance => {
+    if (performance.sourceUrl !== performance.officialUrl) {
+      addSource("補足した情報源を開く", performance.sourceUrl);
+    }
+  });
   sources.forEach((source, index) => {
     if (index > 0) container.append(" / ");
     const link = document.createElement("a");
@@ -394,15 +458,25 @@ function renderSourceLinks(event) {
   });
 }
 
+function renderModalSchedule(event) {
+  const container = document.getElementById("modalDate");
+  if (!event.isMultiPerformance) {
+    container.textContent = scheduleText(event);
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="modal-event-date">${escapeHtml(event.date)}</div>
+    ${performanceListHtml(event)}`;
+}
+
 function openModal(id) {
   const event = events.find(item => item.id === id);
   if (!event) return;
   selectedEventId = id;
-  const category = categories[event.category];
-  document.getElementById("modalCategory").innerHTML =
-    `<span class="category-chip" style="border-left:4px solid ${category.color}">${category.label}</span>`;
+  document.getElementById("modalCategory").innerHTML = categoryChipsHtml(event);
   document.getElementById("modalTitle").textContent = displayTitle(event);
-  document.getElementById("modalDate").textContent = scheduleText(event);
+  renderModalSchedule(event);
   document.getElementById("modalSeries").textContent = seriesText(event);
   document.getElementById("modalCast").textContent = castText(event);
   document.getElementById("modalVenue").textContent = venueText(event, true);
@@ -410,7 +484,7 @@ function openModal(id) {
   document.getElementById("modalVerifiedAt").textContent = `${event.verifiedAt} 時点`;
   renderSourceLinks(event);
 
-  const status = loadStatus(id);
+  const status = loadStatus(event);
   document.getElementById("modalStatus").innerHTML = Object.entries(statusDef).map(([key, definition]) =>
     `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
   ).join("");
@@ -445,7 +519,7 @@ document.addEventListener("keydown", event => {
 });
 
 async function initialize(eventRepository = new StaticEventRepository(verifiedEvents)) {
-  events = await eventRepository.listEvents();
+  events = groupEventsByDate(await eventRepository.listEvents());
   setupFilterControls();
   render();
 }
