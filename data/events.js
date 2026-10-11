@@ -144,8 +144,8 @@ const characterMixUrl = "https://eplus.jp/sf/detail/4551510001-P0030002P021001?P
 const podcastUrl = "https://t.pia.jp/pia/event/event.do?eventCd=2629151";
 const sherlockUrl = "https://hakuhinkantheater.com/sherlockholmes/";
 const hanamiyaUrl = "https://milano-za.jp/events/article?id=20261024";
-const konyaitoUrl = "https://nicochannel.jp/tsukine-kona/articles/news/ar5PYDswmxC6DLFNDWe2nMtX";
-const fioriUrl = "https://nkplanning.wixsite.com/nk-event/%E8%A4%87%E8%A3%BD-%E6%9C%97%E8%AA%AD%E3%81%A8%E6%AD%8C%E3%81%A8%E3%81%8A%E3%81%97%E3%82%83%E3%81%B9%E3%82%8A%E3%82%92%E3%81%8D%E3%81%BF%E3%81%A8-w-smmmiloop";
+const konyaitoUrl = "https://x.com/kona_konyaito/status/2090031032699666848";
+const fioriUrl = "https://nkplanning.wixsite.com/nk-event/2026-10-31-fiori-s";
 const loveLiveFest15thUrl = "https://www.lovelive-anime.jp/special/live/live_detail.php?p=15th_lovelivefest";
 const wantedGhostUrl = "https://www.lovelive-anime.jp/uranohoshi/live/live_detail.php?p=Wanted_Ghost";
 const hasunosoraIshikawaUrl = "https://www.lovelive-anime.jp/hasunosora/live-event/live_detail.php?p=LLDream";
