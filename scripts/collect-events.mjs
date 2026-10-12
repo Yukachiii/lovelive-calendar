@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { castBySeries, events } from "../data/events.js";
 
-const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+const scriptPath = fileURLToPath(import.meta.url);
+const scriptDirectory = dirname(scriptPath);
 const projectRoot = resolve(scriptDirectory, "..");
 
 const STATUS_TERMS = [
@@ -191,7 +192,7 @@ function extractDates(text) {
   return unique(dates);
 }
 
-function extractFacts(text, castNames) {
+export function extractFacts(text, castNames, scope = null) {
   const compactText = text.replace(/\s+/g, "");
   const casts = castNames.filter(name => compactText.includes(name.replace(/\s+/g, "")));
   const times = unique([...text.matchAll(/(?:^|[^\d])(\d{1,2}:\d{2})(?!\d)/g)].map(match => match[1]));
@@ -210,8 +211,32 @@ function extractFacts(text, castNames) {
     statusTerms: unique(statusTerms),
     factLines
   };
+  if (scope) facts.scope = scope;
   facts.fingerprint = hash(JSON.stringify(facts));
   return facts;
+}
+
+export function extractMonitorText(html, pageUrl) {
+  const hostname = new URL(pageUrl).hostname.replace(/^www\./, "");
+  if (hostname !== "aruarucity.com") {
+    return { text: htmlToText(html), scope: null };
+  }
+
+  const contentStart = html.search(/<div\b[^>]*class=["'][^"']*\bevent_center\b[^"']*["'][^>]*>/i);
+  const relatedStart = html.search(/<div\b[^>]*class=["'][^"']*\brelation_box\b[^"']*["'][^>]*>/i);
+  if (contentStart < 0 || relatedStart <= contentStart) {
+    throw new Error("あるあるCityのイベント本文領域を特定できませんでした");
+  }
+
+  return {
+    text: htmlToText(html.slice(contentStart, relatedStart)),
+    scope: "aruarucity:event-primary:v1"
+  };
+}
+
+export function extractMonitorFacts(html, pageUrl, castNames) {
+  const { text, scope } = extractMonitorText(html, pageUrl);
+  return extractFacts(text, castNames, scope);
 }
 
 function extractPageTitle(html, fallback) {
@@ -226,7 +251,7 @@ function difference(current = [], previous = []) {
   return current.filter(value => !previousSet.has(value));
 }
 
-function factsDiff(previous, current) {
+export function factsDiff(previous, current) {
   return {
     addedDates: difference(current.dates, previous.dates),
     removedDates: difference(previous.dates, current.dates),
@@ -238,6 +263,10 @@ function factsDiff(previous, current) {
     addedLines: difference(current.factLines, previous.factLines).slice(0, 12),
     removedLines: difference(previous.factLines, current.factLines).slice(0, 12)
   };
+}
+
+export function factsHaveComparableScope(previous, current) {
+  return (previous.scope || null) === (current.scope || null);
 }
 
 function hasMeaningfulDiff(diff) {
@@ -621,12 +650,15 @@ async function main() {
     const previous = state.sources[monitor.url];
     try {
       const response = await getPage(monitor.url);
-      const text = htmlToText(response.html);
-      const facts = extractFacts(text, castNames);
+      const facts = extractMonitorFacts(response.html, response.finalUrl || monitor.url, castNames);
       const label = extractPageTitle(response.html, monitor.label);
       successfulMonitors += 1;
 
-      if (previous?.facts?.fingerprint && previous.facts.fingerprint !== facts.fingerprint) {
+      if (
+        previous?.facts?.fingerprint
+        && factsHaveComparableScope(previous.facts, facts)
+        && previous.facts.fingerprint !== facts.fingerprint
+      ) {
         const diff = factsDiff(previous.facts, facts);
         if (hasMeaningfulDiff(diff)) {
           changes.push({
@@ -748,7 +780,9 @@ async function main() {
   }, null, 2));
 }
 
-main().catch(error => {
-  console.error(error.stack || error.message);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === scriptPath) {
+  main().catch(error => {
+    console.error(error.stack || error.message);
+    process.exitCode = 1;
+  });
+}
