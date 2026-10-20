@@ -150,6 +150,13 @@ const SHERLOCK_SAME_DAY_TICKET_NOTE = "当日券：各回の開場時間から�
   + "支払いは現金またはキャッシュレス決済（クレジットカード・電子マネー）。"
   + "開場時刻は公式ページに記載なし。";
 const hanamiyaUrl = "https://milano-za.jp/events/article?id=20261024";
+// 会場公式ページの記載のみ。販売状況・当日券は公式に記載がないため載せていません。
+const HANAMIYA_VERIFIED_AT = "2026-10-21";
+const HANAMIYA_TICKET_NOTE = "券種（税込・全席指定・ドリンク代込）：最前列確定チケット 21,700円／特典つきチケット 12,170円／通常チケット 7,120円。"
+  + "入場時に公的な身分証明書による本人確認を行う場合あり。"
+  + "公演中止の場合を除き、購入後の払い戻し・変更・再発行は不可。"
+  + "4歳以上はチケットが必要。"
+  + "手紙・プレゼントは会場の専用BOXで受付（飲食物・開封済みの品物・金券類は不可）。";
 const konyaitoUrl = "https://x.com/kona_konyaito/status/2090031032699666848";
 const fioriUrl = "https://nkplanning.wixsite.com/nk-event/2026-10-31-fiori-s";
 const loveLiveFest15thUrl = "https://www.lovelive-anime.jp/special/live/live_detail.php?p=15th_lovelivefest";
@@ -563,7 +570,8 @@ const candidateEvents = [
   ].map(([suffix, performanceLabel, doorsAt, startsAt]) => verifiedEvent({
     id: `hanamiya-birthday-20261024-${suffix}`, eventGroupId: "hanamiya-birthday-20261024", date: "2026-10-24",
     doorsAt, startsAt, category: "cast", title: "217find! presents 花宮初奈 誕生日イベント～ファラオの祝祭～", performanceLabel,
-    cast: ["花宮初奈"], venue: venues.theaterMilanoZa, officialUrl: hanamiyaUrl
+    cast: ["花宮初奈"], venue: venues.theaterMilanoZa, officialUrl: hanamiyaUrl,
+    note: HANAMIYA_TICKET_NOTE, verifiedAt: HANAMIYA_VERIFIED_AT
   })),
   ...[
     ["day", "昼の部", "13:30", "14:30", ["月音こな", "野中ここな（ゲスト）"]],
