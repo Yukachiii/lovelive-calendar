@@ -143,6 +143,12 @@ const inamiTourUrl = "https://www.sma.co.jp/s/sma/music/inamianju_ticket";
 const characterMixUrl = "https://eplus.jp/sf/detail/4551510001-P0030002P021001?P6=001";
 const podcastUrl = "https://t.pia.jp/pia/event/event.do?eventCd=2629151";
 const sherlockUrl = "https://hakuhinkantheater.com/sherlockholmes/";
+const SHERLOCK_VERIFIED_AT = "2026-10-20";
+const SHERLOCK_SAME_DAY_TICKET_NOTE = "当日券：各回の開場時間から、会場の「当日券受付」窓口で販売。"
+  + "販売開始時点で購入希望者が販売予定枚数を上回る場合は抽選。"
+  + "予定枚数に達し次第、受付終了。"
+  + "支払いは現金またはキャッシュレス決済（クレジットカード・電子マネー）。"
+  + "開場時刻は公式ページに記載なし。";
 const hanamiyaUrl = "https://milano-za.jp/events/article?id=20261024";
 const konyaitoUrl = "https://x.com/kona_konyaito/status/2090031032699666848";
 const fioriUrl = "https://nkplanning.wixsite.com/nk-event/2026-10-31-fiori-s";
@@ -534,21 +540,22 @@ const candidateEvents = [
     doorsAt, startsAt, category: "unit", title: "ポッドキャストメンバーシップ1周年合同イベント", performanceLabel,
     cast: ["小林愛香", "野中ここな"], venue: venues.gardenHall, officialUrl: podcastUrl, sourceUrl
   })),
-  verifiedEvent({
-    id: "sherlock-holmes-20261020-1900", eventGroupId: "sherlock-holmes-20261020-25", date: "2026-10-20",
-    doorsAt: null, startsAt: "19:00", category: "stage",
-    title: "名作リーディングシアター『シャーロック・ホームズ〜緋色の研究・出会い〜』", performanceLabel: "10月20日公演",
-    cast: ["小林裕介", "幸村恵理", "仲村宗悟", "小林竜之", "ペイトン尚未"],
-    venue: venues.hakuhinkanTheater, officialUrl: sherlockUrl
-  }),
+  // 配役表（劇場公式）のうち、ラブライブ！キャストが出演する回のみ掲載します。
+  // castには配役表の全出演者を渡し、verifiedEventでallCastに保持します。
+  // 開場時刻は公式ページに記載がないため、doorsAtはnullのままにしています。
   ...[
-    ["1230", "12:30", ["神尾晋一郎", "伊波杏樹", "野上翔", "石谷春貴", "月音こな"]],
-    ["1800", "18:00", ["細谷佳正", "山中真尋", "永塚拓馬", "米内佑希", "野中ここな"]]
-  ].map(([suffix, startsAt, cast]) => verifiedEvent({
-    id: `sherlock-holmes-20261025-${suffix}`, eventGroupId: "sherlock-holmes-20261020-25", date: "2026-10-25",
+    ["20261020-1900", "2026-10-20", "19:00", "10月20日公演", ["小林裕介", "幸村恵理", "仲村宗悟", "小林竜之", "ペイトン尚未"]],
+    ["20261022-1900", "2026-10-22", "19:00", "10月22日公演", ["鈴木達央", "小泉萌香", "中澤まさとも", "汐谷文康", "礒部花凜"]],
+    ["20261023-1900", "2026-10-23", "19:00", "10月23日公演", ["高橋広樹", "夏川椎菜", "狩野翔", "内田将綺", "久保田未夢"]],
+    ["20261024-1300", "2026-10-24", "13:00", "10月24日 13:00公演", ["緒方恵美", "寺島惇太", "駒田航", "山口智広", "薮島朱音"]],
+    ["20261025-1230", "2026-10-25", "12:30", "12:30公演", ["神尾晋一郎", "伊波杏樹", "野上翔", "石谷春貴", "月音こな"]],
+    ["20261025-1800", "2026-10-25", "18:00", "18:00公演", ["細谷佳正", "山中真尋", "永塚拓馬", "米内佑希", "野中ここな"]]
+  ].map(([suffix, date, startsAt, performanceLabel, cast]) => verifiedEvent({
+    id: `sherlock-holmes-${suffix}`, eventGroupId: "sherlock-holmes-20261020-25", date,
     doorsAt: null, startsAt, category: "stage",
-    title: "名作リーディングシアター『シャーロック・ホームズ〜緋色の研究・出会い〜』", performanceLabel: `${startsAt}公演`,
-    cast, venue: venues.hakuhinkanTheater, officialUrl: sherlockUrl
+    title: "名作リーディングシアター『シャーロック・ホームズ〜緋色の研究・出会い〜』", performanceLabel,
+    cast, venue: venues.hakuhinkanTheater, officialUrl: sherlockUrl,
+    note: SHERLOCK_SAME_DAY_TICKET_NOTE, verifiedAt: SHERLOCK_VERIFIED_AT
   })),
   ...[
     ["part1", "第1部", "14:15", "15:00"],

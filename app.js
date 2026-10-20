@@ -1,5 +1,11 @@
 import { castBySeries, categories, events as verifiedEvents, seriesDefinitions } from "./data/events.js";
 import { groupEventsByDate } from "./services/event-grouper.js";
+import {
+  availableCastNames as availableCastNamesIn,
+  castList,
+  matchesCast,
+  matchesSeries
+} from "./services/event-filters.js";
 import { StaticEventRepository } from "./services/event-repository.js";
 import { createEventStatusStore } from "./services/event-status-store.js";
 
@@ -55,26 +61,13 @@ function displayTitle(event) {
     : event.title;
 }
 
-function castList(event) {
-  return Array.isArray(event.cast) ? event.cast : [event.cast].filter(Boolean);
-}
-
 function castText(event) {
   const cast = castList(event);
   return cast.length ? cast.join("、") : "記載なし";
 }
 
-function normalizeCastName(name = "") {
-  return String(name).replace(/[（(].*$/, "").trim();
-}
-
 function eventCategoryKeys(event) {
   return event.categoryKeys || [event.category];
-}
-
-function matchesSeries(event, seriesKey) {
-  if (seriesKey === "all") return true;
-  return seriesKey === "other" ? !event.series?.length : Boolean(event.series?.includes(seriesKey));
 }
 
 function seriesText(event) {
@@ -200,9 +193,7 @@ function populateSelect(selectId, options) {
 }
 
 function availableCastNames(seriesKey = "all") {
-  return new Set(events
-    .filter(event => matchesSeries(event, seriesKey))
-    .flatMap(event => castList(event).map(normalizeCastName)));
+  return availableCastNamesIn(events, seriesKey);
 }
 
 function populateCastFilter() {
@@ -330,12 +321,10 @@ function resetFilters() {
 }
 
 function matchesFilters(event) {
-  const castMatches = filterState.cast === "all"
-    || castList(event).some(name => normalizeCastName(name) === filterState.cast);
   const regionMatches = filterState.region === "all" || eventRegion(event) === filterState.region;
   return eventCategoryKeys(event).some(category => activeCategories.has(category))
     && matchesSeries(event, filterState.series)
-    && castMatches
+    && matchesCast(event, filterState.cast)
     && regionMatches
     && statusStore.eventMatchesStatus(event, filterState.status)
     && matchesQuery(event);
