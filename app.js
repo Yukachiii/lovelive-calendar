@@ -13,16 +13,16 @@ const statusDef = {
   unset: { label: "－ 未設定", short: "－", cls: "unset" }
 };
 
+const SELECT_FILTERS = ["series", "cast", "region", "status"];
+const allCategoryKeys = () => new Set(Object.keys(categories));
+
 const now = new Date();
 let viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
-let activeCategories = new Set(Object.keys(categories));
+let activeCategories = allCategoryKeys();
 let selectedEventId = null;
 const filterState = {
   query: "",
-  series: "all",
-  cast: "all",
-  region: "all",
-  status: "all"
+  ...Object.fromEntries(SELECT_FILTERS.map(filter => [filter, "all"]))
 };
 
 function saveStatus(id, status) {
@@ -55,13 +55,26 @@ function displayTitle(event) {
     : event.title;
 }
 
+function castList(event) {
+  return Array.isArray(event.cast) ? event.cast : [event.cast].filter(Boolean);
+}
+
 function castText(event) {
-  const cast = Array.isArray(event.cast) ? event.cast : [event.cast].filter(Boolean);
+  const cast = castList(event);
   return cast.length ? cast.join("、") : "記載なし";
 }
 
 function normalizeCastName(name = "") {
   return String(name).replace(/[（(].*$/, "").trim();
+}
+
+function eventCategoryKeys(event) {
+  return event.categoryKeys || [event.category];
+}
+
+function matchesSeries(event, seriesKey) {
+  if (seriesKey === "all") return true;
+  return seriesKey === "other" ? !event.series?.length : Boolean(event.series?.includes(seriesKey));
 }
 
 function seriesText(event) {
@@ -78,19 +91,6 @@ function venueText(event, includeAddress = false) {
   return event.venue.name;
 }
 
-function scheduleText(event) {
-  const parts = [
-    event.doorsAt ? `開場 ${event.doorsAt}` : "開場 記載なし",
-    event.startsAt ? `開演 ${event.startsAt}` : "開演 未定"
-  ];
-  if (event.endsAt) parts.push(`終了 ${event.endsAt}`);
-  return `${event.date}　${parts.join(" / ")}`;
-}
-
-function performanceName(performance, index) {
-  return performance.performanceLabel || `公演 ${index + 1}`;
-}
-
 function performanceTimeText(performance) {
   const parts = [
     performance.doorsAt ? `開場 ${performance.doorsAt}` : "開場 記載なし",
@@ -100,10 +100,30 @@ function performanceTimeText(performance) {
   return parts.join(" / ");
 }
 
+function scheduleText(event) {
+  return `${event.date}　${performanceTimeText(event)}`;
+}
+
+function performanceName(performance, index) {
+  return performance.performanceLabel || `公演 ${index + 1}`;
+}
+
 function statusOptionsHtml(status) {
   return Object.entries(statusDef).map(([key, definition]) =>
     `<option value="${key}"${status === key ? " selected" : ""}>${definition.label}</option>`
   ).join("");
+}
+
+function statusButtonsHtml(status) {
+  return Object.entries(statusDef).map(([key, definition]) =>
+    `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
+  ).join("");
+}
+
+function bindStatusButtons(container, id) {
+  container.querySelectorAll(".status-btn").forEach(button =>
+    button.addEventListener("click", () => saveStatus(id, button.dataset.status))
+  );
 }
 
 function performanceListHtml(event, { showStatus = false } = {}) {
@@ -136,7 +156,7 @@ function bindPerformanceStatusControls(container) {
 }
 
 function categoryChipsHtml(event) {
-  return (event.categoryKeys || [event.category]).map(categoryKey => {
+  return eventCategoryKeys(event).map(categoryKey => {
     const category = categories[categoryKey];
     return `<span class="category-chip" style="border-left:4px solid ${category.color}">${escapeHtml(category.label)}</span>`;
   }).join("");
@@ -180,12 +200,9 @@ function populateSelect(selectId, options) {
 }
 
 function availableCastNames(seriesKey = "all") {
-  const targetEvents = seriesKey === "all"
-    ? events
-    : events.filter(event => seriesKey === "other" ? !event.series?.length : event.series?.includes(seriesKey));
-  return new Set(targetEvents.flatMap(event =>
-    (Array.isArray(event.cast) ? event.cast : [event.cast]).filter(Boolean).map(normalizeCastName)
-  ));
+  return new Set(events
+    .filter(event => matchesSeries(event, seriesKey))
+    .flatMap(event => castList(event).map(normalizeCastName)));
 }
 
 function populateCastFilter() {
@@ -271,7 +288,7 @@ function setupFilterControls() {
     populateCastFilter();
     render();
   });
-  ["cast", "region", "status"].forEach(filter => {
+  SELECT_FILTERS.filter(filter => filter !== "series").forEach(filter => {
     document.getElementById(`${filter}Filter`).addEventListener("change", event => {
       filterState[filter] = event.target.value;
       render();
@@ -281,7 +298,7 @@ function setupFilterControls() {
 }
 
 function activeFilterCount() {
-  const selectFilters = ["series", "cast", "region", "status"]
+  const selectFilters = SELECT_FILTERS
     .filter(filter => filterState[filter] !== "all").length;
   const categoryFilter = activeCategories.size === Object.keys(categories).length ? 0 : 1;
   return Number(Boolean(filterState.query)) + selectFilters + categoryFilter;
@@ -290,7 +307,7 @@ function activeFilterCount() {
 function syncFilterControls() {
   const queryInput = document.getElementById("queryFilter");
   if (queryInput.value !== filterState.query) queryInput.value = filterState.query;
-  ["series", "cast", "region", "status"].forEach(filter => {
+  SELECT_FILTERS.forEach(filter => {
     const select = document.getElementById(`${filter}Filter`);
     if (select.value !== filterState[filter]) select.value = filterState[filter];
   });
@@ -304,32 +321,32 @@ function syncFilterControls() {
 
 function resetFilters() {
   filterState.query = "";
-  filterState.series = "all";
-  filterState.cast = "all";
-  filterState.region = "all";
-  filterState.status = "all";
-  activeCategories = new Set(Object.keys(categories));
+  SELECT_FILTERS.forEach(filter => {
+    filterState[filter] = "all";
+  });
+  activeCategories = allCategoryKeys();
   populateCastFilter();
   render();
 }
 
+function matchesFilters(event) {
+  const castMatches = filterState.cast === "all"
+    || castList(event).some(name => normalizeCastName(name) === filterState.cast);
+  const regionMatches = filterState.region === "all" || eventRegion(event) === filterState.region;
+  return eventCategoryKeys(event).some(category => activeCategories.has(category))
+    && matchesSeries(event, filterState.series)
+    && castMatches
+    && regionMatches
+    && statusStore.eventMatchesStatus(event, filterState.status)
+    && matchesQuery(event);
+}
+
+const eventSortKey = event => `${event.date}${event.startsAt || "99:99"}`;
+
 function currentMonthEvents() {
-  return unfilteredMonthEvents().filter(event => {
-    const seriesMatches = filterState.series === "all"
-      || (filterState.series === "other" ? !event.series?.length : event.series?.includes(filterState.series));
-    const castMatches = filterState.cast === "all"
-      || (Array.isArray(event.cast) ? event.cast : [event.cast]).some(name => normalizeCastName(name) === filterState.cast);
-    const regionMatches = filterState.region === "all" || eventRegion(event) === filterState.region;
-    const statusMatches = statusStore.eventMatchesStatus(event, filterState.status);
-    const categoryMatches = (event.categoryKeys || [event.category])
-      .some(category => activeCategories.has(category));
-    return categoryMatches
-      && seriesMatches
-      && castMatches
-      && regionMatches
-      && statusMatches
-      && matchesQuery(event);
-  }).sort((a, b) => `${a.date}${a.startsAt || "99:99"}`.localeCompare(`${b.date}${b.startsAt || "99:99"}`));
+  return unfilteredMonthEvents()
+    .filter(matchesFilters)
+    .sort((a, b) => eventSortKey(a).localeCompare(eventSortKey(b)));
 }
 
 function calendarStatusText(event) {
@@ -413,16 +430,13 @@ function renderList() {
       ${performanceListHtml(event, { showStatus: true })}
       <div class="small">関連：${escapeHtml(seriesText(event))}<br>関連キャスト：${escapeHtml(castText(event))}<br>会場：${escapeHtml(venueText(event))}</div>
       ${event.isMultiPerformance ? "" : `<div class="status-row">
-        ${Object.entries(statusDef).map(([key, definition]) =>
-          `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
-        ).join("")}
+        ${statusButtonsHtml(status)}
       </div>`}`;
     bindPerformanceStatusControls(card);
-    card.querySelectorAll(".status-btn").forEach(button =>
-      button.addEventListener("click", () => saveStatus(event.id, button.dataset.status))
-    );
-    card.querySelector("h3").style.cursor = "pointer";
-    card.querySelector("h3").addEventListener("click", () => openModal(event.id));
+    bindStatusButtons(card, event.id);
+    const heading = card.querySelector("h3");
+    heading.style.cursor = "pointer";
+    heading.addEventListener("click", () => openModal(event.id));
     list.appendChild(card);
   });
 }
@@ -498,15 +512,9 @@ function openModal(id) {
   document.getElementById("modalVerifiedAt").textContent = `${event.verifiedAt} 時点`;
   renderSourceLinks(event);
 
-  const status = statusStore.get(event.id);
-  document.getElementById("modalStatus").innerHTML = event.isMultiPerformance
-    ? ""
-    : Object.entries(statusDef).map(([key, definition]) =>
-      `<button class="status-btn ${definition.cls} ${status === key ? "active" : ""}" data-status="${key}">${definition.label}</button>`
-    ).join("");
-  document.querySelectorAll("#modalStatus .status-btn").forEach(button =>
-    button.addEventListener("click", () => saveStatus(id, button.dataset.status))
-  );
+  const modalStatus = document.getElementById("modalStatus");
+  modalStatus.innerHTML = event.isMultiPerformance ? "" : statusButtonsHtml(statusStore.get(event.id));
+  bindStatusButtons(modalStatus, id);
   document.getElementById("modalBackdrop").classList.add("open");
 }
 

@@ -2,6 +2,10 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function performanceSortKey(event) {
   return `${event.startsAt || "99:99"}${event.doorsAt || "99:99"}${event.id}`;
 }
@@ -30,8 +34,8 @@ export function groupEventsByDate(events) {
       doorsAt: event.doorsAt,
       startsAt: event.startsAt,
       endsAt: event.endsAt,
-      cast: Array.isArray(event.cast) ? [...event.cast] : [],
-      allCast: Array.isArray(event.allCast) ? [...event.allCast] : [],
+      cast: [...asArray(event.cast)],
+      allCast: [...asArray(event.allCast)],
       category: event.category,
       officialUrl: event.officialUrl,
       sourceUrl: event.sourceUrl,
@@ -44,9 +48,9 @@ export function groupEventsByDate(events) {
       id: isMultiPerformance ? `group:${groupKey}` : first.id,
       sourceEventIds: sortedEvents.map(event => event.id),
       categoryKeys: unique(sortedEvents.map(event => event.category)),
-      cast: unique(sortedEvents.flatMap(event => Array.isArray(event.cast) ? event.cast : [])),
-      allCast: unique(sortedEvents.flatMap(event => Array.isArray(event.allCast) ? event.allCast : [])),
-      series: unique(sortedEvents.flatMap(event => Array.isArray(event.series) ? event.series : [])),
+      cast: unique(sortedEvents.flatMap(event => asArray(event.cast))),
+      allCast: unique(sortedEvents.flatMap(event => asArray(event.allCast))),
+      series: unique(sortedEvents.flatMap(event => asArray(event.series))),
       performanceLabel: isMultiPerformance ? "" : first.performanceLabel,
       performances,
       isMultiPerformance,

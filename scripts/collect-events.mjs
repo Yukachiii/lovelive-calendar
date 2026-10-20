@@ -338,6 +338,10 @@ function extractLinks(html, baseUrl, allowUrlPattern) {
   return [...new Map(links.map(link => [link.url, link])).values()];
 }
 
+function candidateDate(facts, today) {
+  return facts.dates.find(date => date >= today) || facts.dates.at(-1) || null;
+}
+
 function isCurrentOrFutureCandidate(facts, today, lookbackDays) {
   if (facts.dates.length === 0) return true;
   const threshold = new Date(`${today}T00:00:00Z`);
@@ -410,6 +414,21 @@ function formatList(values) {
   return values.length ? values.join("、") : "なし";
 }
 
+const DIFF_VALUE_LABELS = [
+  ["addedDates", "追加された日付"],
+  ["removedDates", "消えた日付"],
+  ["addedTimes", "追加された時刻"],
+  ["removedTimes", "消えた時刻"],
+  ["addedCasts", "追加されたキャスト"],
+  ["removedCasts", "消えたキャスト"],
+  ["addedStatusTerms", "新たに検出した重要語句"]
+];
+
+const DIFF_LINE_LABELS = [
+  ["addedLines", "追加・変更された可能性がある記述"],
+  ["removedLines", "消えた可能性がある記述"]
+];
+
 function buildMarkdown(report) {
   const lines = [
     "# イベント情報 自動収集レポート",
@@ -434,39 +453,33 @@ function buildMarkdown(report) {
     for (const change of report.changes) {
       lines.push(`### [${change.label}](${change.url})`, "");
       if (change.events.length) lines.push(`掲載イベント: ${change.events.join(" / ")}`, "");
-      if (change.diff.addedDates.length) lines.push(`- 追加された日付: ${formatList(change.diff.addedDates)}`);
-      if (change.diff.removedDates.length) lines.push(`- 消えた日付: ${formatList(change.diff.removedDates)}`);
-      if (change.diff.addedTimes.length) lines.push(`- 追加された時刻: ${formatList(change.diff.addedTimes)}`);
-      if (change.diff.removedTimes.length) lines.push(`- 消えた時刻: ${formatList(change.diff.removedTimes)}`);
-      if (change.diff.addedCasts.length) lines.push(`- 追加されたキャスト: ${formatList(change.diff.addedCasts)}`);
-      if (change.diff.removedCasts.length) lines.push(`- 消えたキャスト: ${formatList(change.diff.removedCasts)}`);
-      if (change.diff.addedStatusTerms.length) lines.push(`- 新たに検出した重要語句: ${formatList(change.diff.addedStatusTerms)}`);
-      if (change.diff.addedLines.length) {
-        lines.push("- 追加・変更された可能性がある記述:");
-        for (const line of change.diff.addedLines) lines.push(`  - ${line}`);
+      for (const [key, label] of DIFF_VALUE_LABELS) {
+        if (change.diff[key].length) lines.push(`- ${label}: ${formatList(change.diff[key])}`);
       }
-      if (change.diff.removedLines.length) {
-        lines.push("- 消えた可能性がある記述:");
-        for (const line of change.diff.removedLines) lines.push(`  - ${line}`);
+      for (const [key, label] of DIFF_LINE_LABELS) {
+        if (!change.diff[key].length) continue;
+        lines.push(`- ${label}:`);
+        for (const line of change.diff[key]) lines.push(`  - ${line}`);
       }
       lines.push("");
     }
   }
 
+  const errorLine = warning => `- [${warning.label}](${warning.url}): ${warning.error}`;
+
   if (report.warnings.length) {
-    lines.push("## 継続している監視エラー", "");
-    for (const warning of report.warnings) {
-      lines.push(`- [${warning.label}](${warning.url}): ${warning.error}`);
-    }
-    lines.push("");
+    lines.push("## 継続している監視エラー", "", ...report.warnings.map(errorLine), "");
   }
 
   if (report.transientErrors.length) {
-    lines.push("## 今回の一時的な取得エラー（通知対象外）", "");
-    for (const warning of report.transientErrors) {
-      lines.push(`- [${warning.label}](${warning.url}): ${warning.error}`);
-    }
-    lines.push("", "同じ取得エラーが2回続いた場合に、確認用Issueの対象になります。", "");
+    lines.push(
+      "## 今回の一時的な取得エラー（通知対象外）",
+      "",
+      ...report.transientErrors.map(errorLine),
+      "",
+      "同じ取得エラーが2回続いた場合に、確認用Issueの対象になります。",
+      ""
+    );
   }
 
   if (!report.hasAlerts) {
@@ -590,8 +603,7 @@ async function main() {
         try {
           const detail = await getPage(link.url);
           recordCheckSuccess(detailCheckKey, link.label || source.label, link.url);
-          const text = htmlToText(detail.html);
-          const facts = extractFacts(text, castNames);
+          const facts = extractFacts(htmlToText(detail.html), castNames);
           if (!isCurrentOrFutureCandidate(facts, today, config.lookbackDays)) continue;
           const title = extractPageTitle(detail.html, link.label || source.label);
           monitorMap.set(link.url, { url: link.url, label: title, events: [], kind: "candidate" });
@@ -599,7 +611,7 @@ async function main() {
             addCandidate(candidateMap, {
               title,
               url: link.url,
-              date: facts.dates.find(date => date >= today) || facts.dates.at(-1) || null,
+              date: candidateDate(facts, today),
               category: "公式ライブ一覧",
               series: [],
               discoveredFrom: source.label,
@@ -624,12 +636,11 @@ async function main() {
         try {
           const detail = await getPage(url);
           recordCheckSuccess(checkKey, source.label, url);
-          const text = htmlToText(detail.html);
-          const facts = extractFacts(text, castNames);
+          const facts = extractFacts(htmlToText(detail.html), castNames);
           addCandidate(candidateMap, {
             title: extractPageTitle(detail.html, source.label),
             url,
-            date: facts.dates.find(date => date >= today) || facts.dates.at(-1) || null,
+            date: candidateDate(facts, today),
             category: "登録済み監視候補",
             series: [],
             discoveredFrom: "automation/sources.json",

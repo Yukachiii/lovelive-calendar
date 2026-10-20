@@ -7,6 +7,10 @@ function isEventStatus(value) {
   return EVENT_STATUSES.includes(value);
 }
 
+function emptyCounts() {
+  return Object.fromEntries(EVENT_STATUSES.map(status => [status, 0]));
+}
+
 function performanceIds(event) {
   if (Array.isArray(event.performances) && event.performances.length) {
     return event.performances.map(performance => performance.id);
@@ -54,7 +58,7 @@ export function createEventStatusStore(storage, { prefix = DEFAULT_PREFIX } = {}
   const getEventCounts = event => getEventStatuses(event).reduce((counts, entry) => {
     counts[entry.status] += 1;
     return counts;
-  }, { going: 0, maybe: 0, no: 0, unset: 0 });
+  }, emptyCounts());
 
   const eventMatchesStatus = (event, status) => {
     if (status === "all") return true;
@@ -67,7 +71,7 @@ export function createEventStatusStore(storage, { prefix = DEFAULT_PREFIX } = {}
       totals[status] += counts[status];
     });
     return totals;
-  }, { going: 0, maybe: 0, no: 0, unset: 0 });
+  }, emptyCounts());
 
   return {
     countPerformances,
